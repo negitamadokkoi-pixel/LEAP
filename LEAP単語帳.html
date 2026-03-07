@@ -341,14 +341,20 @@ function flipCard(){
 function updateCard(){
   if(!deck.length)return;
   const w=deck[idx];
-  flipped=false;
-  document.getElementById('card-inner').classList.remove('flip');
-  // front
+  const cardInner = document.getElementById('card-inner');
+
+  // 1. アニメーションを一時的にオフにして、即座に表面へ
+  cardInner.style.transition = 'none'; 
+  flipped = false;
+  cardInner.classList.remove('flip');
+
+  // 2. 文字の書き換え
   document.getElementById('f-num').textContent='No. '+w.id;
   document.getElementById('b-num').textContent='No. '+w.id;
   if(dir==='en'){
     document.getElementById('f-front-tag').textContent='英語';
     document.getElementById('f-word').textContent=w.w;
+    document.getElementById('f-word').style.fontSize=''; 
     document.getElementById('b-eng').textContent=w.w;
     document.getElementById('b-meaning').textContent=w.m;
   } else {
@@ -358,15 +364,22 @@ function updateCard(){
     document.getElementById('b-eng').textContent=w.w;
     document.getElementById('b-meaning').textContent=w.m;
   }
-  // prog
+
+  // 3. 進捗表示
   const done=voted.size, total=deck.length, pct=total?Math.round(done/total*100):0;
   document.getElementById('f-prog').textContent=(idx+1)+' / '+total;
   document.getElementById('f-pct').textContent=pct+'%';
   document.getElementById('f-fill').style.width=pct+'%';
 
-if(dir==='en' && !flipped) {
+  // 4. 音声読み上げ（英→日モードの時だけ）
+  if(dir==='en' && !flipped) {
     speech(w.w);
-}  
+  }
+
+  // 5. アニメーションを復活させる
+  setTimeout(() => {
+    cardInner.style.transition = 'transform .55s cubic-bezier(.4,0,.2,1)';
+  }, 10);
 }
 
 function vote(ok){
