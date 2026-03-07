@@ -507,15 +507,12 @@ function renderList(){
   const src=q?ALL.filter(w=>w.w.toLowerCase().includes(q)||w.m.includes(q)):ALL;
   const el=document.getElementById('wlist');
   el.innerHTML='';
-  src.slice(0,300).forEach(w=>{
+   src.forEach(w=>{
     const row=document.createElement('div');
     row.className='wrow'+(weakSet.has(w.id)?' weak':'');
     row.innerHTML=`<span class="wnum">${w.id}</span><span class="weng">${w.w}</span><span class="wjpn">${w.m}</span>${weakSet.has(w.id)?'<span class="wbadge">苦手</span>':''}`;
     el.appendChild(row);
-  });
-  if(src.length>300){const n=document.createElement('div');n.style.cssText='text-align:center;padding:16px;color:var(--muted);font-size:.8rem';n.textContent=`他 ${src.length-300} 件（検索を絞り込んでください）`;el.appendChild(n)}
-}
-
+  });}
 // ─── WEAK ───
 function renderWeak(){
   const ws=[...weakSet];
