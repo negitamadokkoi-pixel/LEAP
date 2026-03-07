@@ -339,18 +339,24 @@ function flipCard(){
 }
 
 function updateCard(){
+function updateCard(){
   if(!deck.length)return;
-  const w=deck[idx];
   const cardInner = document.getElementById('card-inner');
 
-  // 1. アニメーションを一時的にオフにして、即座に表面へ
+  // 1. まずアニメーションを完全に切り、強制的に表面(flipped=false)にする
   cardInner.style.transition = 'none'; 
   flipped = false;
   cardInner.classList.remove('flip');
 
-  // 2. 文字の書き換え
+  // ★ここがコツ：ブラウザに「一旦表面に戻ったこと」を強制的に認識させるための呪文
+  // これを一行入れるだけで、描き換えの順番待ちが整理されます
+  void cardInner.offsetWidth; 
+
+  // 2. 表面に戻ったことが確定してから、中身を書き換える
+  const w=deck[idx];
   document.getElementById('f-num').textContent='No. '+w.id;
   document.getElementById('b-num').textContent='No. '+w.id;
+  
   if(dir==='en'){
     document.getElementById('f-front-tag').textContent='英語';
     document.getElementById('f-word').textContent=w.w;
@@ -371,15 +377,15 @@ function updateCard(){
   document.getElementById('f-pct').textContent=pct+'%';
   document.getElementById('f-fill').style.width=pct+'%';
 
-  // 4. 音声読み上げ（英→日モードの時だけ）
+  // 4. 音声読み上げ
   if(dir==='en' && !flipped) {
     speech(w.w);
   }
 
-  // 5. アニメーションを復活させる
+  // 5. 最後にアニメーションを復活させる（少し長めの20msに設定）
   setTimeout(() => {
     cardInner.style.transition = 'transform .55s cubic-bezier(.4,0,.2,1)';
-  }, 10);
+  }, 20);
 }
 
 function vote(ok){
