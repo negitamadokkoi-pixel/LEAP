@@ -190,7 +190,7 @@ main{flex:1;max-width:740px;width:100%;margin:0 auto;padding:24px 16px}
     <button class="btn btn-nav" onclick="go(1)">次へ →</button>
   </div>
 
-  <div class="done" id="f-done">
+    <div class="done" id="f-done">
     <h2>COMPLETE!</h2>
     <p style="color:var(--muted)">このセットを終了しました</p>
     <div class="done-stats">
@@ -198,7 +198,10 @@ main{flex:1;max-width:740px;width:100%;margin:0 auto;padding:24px 16px}
       <div class="ds" id="d-ng">0<span>不正解</span></div>
       <div class="ds" id="d-pct">—<span>正答率</span></div>
     </div>
-    <button class="btn-restart" onclick="restartFlash()">もう一度</button>
+    
+    <div id="f-wrong-list" class="wlist" style="margin-top:24px; text-align:left; max-height:300px; overflow-y:auto; border-top:1px solid var(--border); padding-top:16px;"></div>
+
+    <button class="btn-restart" onclick="restartFlash()" style="margin-top:24px">もう一度</button>
   </div>
 </div>
 
@@ -390,6 +393,32 @@ function showDone(){
   document.getElementById('d-ok').childNodes[0].textContent=okCount;
   document.getElementById('d-ng').childNodes[0].textContent=ngCount;
   document.getElementById('d-pct').childNodes[0].textContent=pct+'%';
+
+  // --- 間違えた単語リストの表示処理 ---
+  const listEl = document.getElementById('f-wrong-list');
+  listEl.innerHTML = ''; // 一旦クリア
+  
+  // 今回のデッキの中で、苦手セット（weakSet）に入っているものだけを取り出す
+  const wrongs = deck.filter(w => weakSet.has(w.id));
+  
+  if (wrongs.length > 0) {
+    const title = document.createElement('p');
+    title.style.cssText = 'color:var(--red); font-size:0.85rem; font-weight:bold; margin-bottom:12px;';
+    title.textContent = '要復習：';
+    listEl.appendChild(title);
+
+    wrongs.forEach(w => {
+      const row = document.createElement('div');
+      row.className = 'wrow weak';
+      row.innerHTML = `<span class="wnum">${w.id}</span><span class="weng">${w.w}</span><span class="wjpn">${w.m}</span>`;
+      listEl.appendChild(row);
+    });
+    listEl.style.display = 'block';
+  } else {
+    listEl.style.display = 'none';
+  }
+  // ---------------------------------
+
   document.getElementById('f-done').style.display='block';
   updateHdr();
 }
