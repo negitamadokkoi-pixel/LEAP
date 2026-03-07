@@ -181,8 +181,7 @@ main{flex:1;max-width:740px;width:100%;margin:0 auto;padding:24px 16px}
   </div>
 
   <div class="btnrow">
-    <button class="btn btn-ok" onclick="vote(true)">✓ 覚えた</button>
-    <button class="btn btn-flip" onclick="flipCard()">↺</button>
+    <button class="btn btn-ok" onclick="vote(true)">✓ 覚えた</button>    <button class="btn btn-flip" onclick="flipCard()">↺</button>
     <button class="btn btn-ng" onclick="vote(false)">✗ もう一度</button>
   </div>
   <div class="btnrow">
@@ -364,6 +363,10 @@ function updateCard(){
   document.getElementById('f-prog').textContent=(idx+1)+' / '+total;
   document.getElementById('f-pct').textContent=pct+'%';
   document.getElementById('f-fill').style.width=pct+'%';
+
+if(dir==='en' && !flipped) {
+    speech(w.w);
+}  
 }
 
 function vote(ok){
@@ -581,6 +584,15 @@ document.addEventListener('keydown',e=>{
 applyRange();
 applyQuizRange();
 renderList();
+
+  function speech(text) {
+  // ブラウザの読み上げ機能を呼び出す
+  const uttr = new SpeechSynthesisUtterance(text);
+  uttr.lang = 'en-US'; // 英語（アメリカ）に設定
+  uttr.rate = 0.9;     // 少しゆっくりめに再生（1.0が標準）
+  window.speechSynthesis.speak(uttr);
+}
+
 </script>
 </body>
 </html>
