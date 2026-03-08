@@ -133,7 +133,9 @@
     .wbadge.ok { background: rgba(62, 207, 142, .15); color: var(--green); border-color: var(--green); }
     .wbadge.weak { background: rgba(240, 101, 112, .15); color: var(--red); border-color: var(--red); }
 
-    /* ジャンプ時の強調アニメーション */
+    .jump-box { display: flex; gap: 8px; margin-bottom: 15px; }
+    .jump-input { flex: 1; background: var(--s2); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 10px; font-size: .9rem; }
+
     @keyframes highlight-row {
       0% { background: var(--s1); }
       50% { background: var(--s3); border-color: var(--accent); }
@@ -247,7 +249,10 @@
     </div>
 
     <div id='pane-list' class='hidden'>
-      <input class='tbinput' style='width:100%; margin-bottom:15px;' type='text' id='search' placeholder='検索 (スペースでOR検索 / 数字でその番号へ移動)' oninput='renderList()'>
+      <div class='jump-box'>
+        <input class='jump-input' type='text' id='search' placeholder='検索 (スペースでOR検索) / 番号入力でGo' onkeydown='if(event.key==="Enter")jumpToId()'>
+        <button class='btn-go' onclick='jumpToId()'>Go</button>
+      </div>
       <div class='wlist' id='wlist'></div>
     </div>
 
@@ -445,10 +450,9 @@
       
       const keywords = searchInput.toLowerCase().split(/[\s　]+/).filter(k => k.length > 0);
       
-      // OR検索ロジック (英単語・意味のみ。番号での絞り込みは行わない)
       const filtered = ALL.filter(w => {
         if (keywords.length === 0) return true;
-        // 数字のみのワードは検索対象から除外（ジャンプ用として扱うため）
+        // 数字のみの検索ワードはフィルタリング対象から外す（ジャンプ用）
         const textKeywords = keywords.filter(k => isNaN(k));
         if (textKeywords.length === 0) return true; 
 
@@ -461,7 +465,7 @@
         const isW = weakSet.has(w.id), isO = okSet.has(w.id);
         const row = document.createElement('div');
         row.className = 'wrow' + (isW ? ' weak' : isO ? ' ok' : '');
-        row.id = 'word-row-' + w.id; // スクロール用ID
+        row.id = 'word-row-' + w.id;
         let label = '未着手', bCls = 'wbadge';
         if (isW) { label = '苦手'; bCls += ' weak'; } else if (isO) { label = '覚えた'; bCls += ' ok'; }
         
@@ -469,16 +473,23 @@
         row.onclick = () => speak(w.w);
         el.appendChild(row);
       });
+    }
 
-      // 番号ジャンプ処理
-      const jumpId = keywords.find(k => !isNaN(k));
+    // 番号へのジャンプのみを実行する関数
+    function jumpToId() {
+      const input = document.getElementById('search').value.trim();
+      const keywords = input.split(/[\s　]+/);
+      const jumpId = keywords.find(k => !isNaN(k) && k !== '');
+
       if (jumpId) {
         const target = document.getElementById('word-row-' + jumpId);
         if (target) {
           target.scrollIntoView({ behavior: 'smooth', block: 'center' });
           target.classList.remove('jump-target');
-          void target.offsetWidth; // リフロー強制
+          void target.offsetWidth; 
           target.classList.add('jump-target');
+        } else {
+          alert('No.' + jumpId + ' は現在のリスト（検索結果）に存在しません');
         }
       }
     }
@@ -525,6 +536,11 @@
       }
       return a;
     }
+
+    // 初回レンダリング用にイベントリスナーを追加
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('search').addEventListener('input', renderList);
+    });
   </script>
 </body>
 </html>
