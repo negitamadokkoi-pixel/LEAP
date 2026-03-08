@@ -1,565 +1,532 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang='ja'>
 <head>
-  <meta name="robots" content="noindex,nofollow">
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LEAP 単語帳</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Noto+Sans+JP:wght@300;400;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#07080f;--s1:#0f1018;--s2:#171825;--s3:#1e2030;
-  --accent:#5b8dee;--green:#3ecf8e;--red:#f06570;--yellow:#f0c05a;
-  --text:#e2e4f0;--muted:#5a5e80;--border:#22243a;
-  --r:14px;
-}
-body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
-.scroll-btn{position:fixed;bottom:20px;right:20px;width:44px;height:44px;background:var(--accent);color:#fff;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:1000;font-size:1.2rem;opacity:0.8}
-.scroll-btn:hover{opacity:1;transform:translateY(-2px)}
-header{background:var(--s1);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.logo{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:6px;color:var(--accent)}
-.logo em{color:var(--text);font-style:normal}
-.hstats{display:flex;gap:20px}
-.hstat{text-align:center;font-size:.7rem;color:var(--muted);line-height:1.2}
-.hstat strong{display:block;font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:1px;color:var(--text)}
-.tabs{display:flex;background:var(--s1);border-bottom:1px solid var(--border)}
-.tab{flex:1;padding:14px;text-align:center;cursor:pointer;font-size:.85rem;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s;user-select:none}
-.tab.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(91,141,238,.06)}
-.tab:hover:not(.active){color:var(--text)}
-main{flex:1;max-width:740px;width:100%;margin:0 auto;padding:24px 16px}
-.toolbar{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
-.toolbar label{font-size:.75rem;color:var(--muted)}
-.tbinput{background:var(--s2);border:1px solid var(--border);color:var(--text);padding:7px 11px;border-radius:8px;font-size:.82rem;font-family:inherit}
-.tbinput:focus{outline:none;border-color:var(--accent)}
-.tbbtn{background:var(--s2);border:1px solid var(--border);color:var(--muted);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:.82rem;font-family:inherit;transition:all .2s;white-space:nowrap}
-.tbbtn:hover,.tbbtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
-.range-row{display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted)}
-.range-row input{width:72px}
-.pgwrap{margin-bottom:18px}
-.pginfo{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);margin-bottom:5px}
-.pgbar{height:4px;background:var(--border);border-radius:3px;overflow:hidden}
-.pgfill{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:3px;transition:width .4s}
-.card-scene{perspective:1200px;cursor:pointer;margin-bottom:20px;user-select:none}
-.card-inner{position:relative;width:100%;min-height:260px;transform-style:preserve-3d;transition:transform .55s cubic-bezier(.4,0,.2,1)}
-.card-inner.flip{transform:rotateY(180deg)}
-.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:var(--r);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:36px;text-align:center;border:1px solid var(--border)}
-.face-front{background:var(--s1)}
-.face-back{background:var(--s2);border-color:var(--accent);transform:rotateY(180deg)}
-.face-tag{font-size:.65rem;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:14px}
-.face-word{font-family:'Bebas Neue',sans-serif;font-size:4.2rem;letter-spacing:2px;line-height:1;color:var(--text)}
-.face-sub{font-size:.78rem;color:var(--muted);margin-top:16px}
-.face-num{font-size:.7rem;color:var(--accent);font-family:'Bebas Neue',sans-serif;letter-spacing:2px;margin-bottom:10px}
-.face-eng{font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--accent);letter-spacing:2px;margin-bottom:14px}
-.face-meaning{font-size:.98rem;line-height:1.85;color:var(--text);max-width:420px}
-.btnrow{display:flex;gap:10px;justify-content:center;margin-bottom:14px}
-.btn{padding:13px 26px;border-radius:10px;border:none;cursor:pointer;font-family:inherit;font-size:.88rem;font-weight:700;transition:all .18s;display:flex;align-items:center;gap:7px;justify-content:center}
-.btn:hover{transform:translateY(-2px);filter:brightness(1.15)}
-.btn-ok{background:rgba(62,207,142,.13);border:1px solid var(--green);color:var(--green);flex:1;max-width:200px}
-.btn-ng{background:rgba(240,101,112,.13);border:1px solid var(--red);color:var(--red);flex:1;max-width:200px}
-.btn-flip{background:var(--s2);border:1px solid var(--border);color:var(--muted);width:48px;height:48px;padding:0;border-radius:50%;font-size:1.1rem}
-.btn-nav{background:var(--s2);border:1px solid var(--border);color:var(--muted);padding:10px 20px}
-.btn-nav:hover{color:var(--text);border-color:var(--muted)}
-.btn-go{background:var(--accent);border:none;color:#fff;padding:8px 18px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:700}
-.qcard{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:32px;text-align:center;margin-bottom:16px}
-.qword{font-family:'Bebas Neue',sans-serif;font-size:3.8rem;letter-spacing:2px;margin:10px 0}
-.qjp{font-size:1.1rem;margin:10px 0;color:var(--text)}
-.qlabel{font-size:.65rem;letter-spacing:3px;color:var(--muted);text-transform:uppercase}
-.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
-.opt{background:var(--s2);border:1px solid var(--border);color:var(--text);padding:16px 14px;border-radius:10px;cursor:pointer;font-family:inherit;font-size:.88rem;line-height:1.55;text-align:left;transition:all .2s}
-.opt:hover:not([disabled]){border-color:var(--accent)}
-.opt.ok{background:rgba(62,207,142,.18);border-color:var(--green);color:var(--green)}
-.opt.ng{background:rgba(240,101,112,.18);border-color:var(--red);color:var(--red)}
-.search-wrap{margin-bottom:14px}
-.search{width:100%;padding:12px 16px;background:var(--s1);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:inherit;font-size:.93rem}
-.search:focus{outline:none;border-color:var(--accent)}
-.wlist{display:flex;flex-direction:column;gap:6px}
-.wrow{display:flex;gap:12px;padding:12px 16px;background:var(--s1);border:1px solid var(--border);border-radius:9px;align-items:flex-start;transition:border-color .2s;cursor:default}
-.wrow:hover{border-color:var(--muted)}
-.wrow.weak{border-left:3px solid var(--red)}
-.wrow.ok{border-left:3px solid var(--green)}
-.wnum{font-size:.7rem;color:var(--muted);min-width:34px;padding-top:3px}
-.weng{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;letter-spacing:1px;color:var(--accent);min-width:140px}
-.wjpn{font-size:.83rem;color:var(--text);line-height:1.6}
-.wbadge{font-size:.65rem;padding:2px 6px;border-radius:4px;background:rgba(240,101,112,.2);color:var(--red);white-space:nowrap;margin-left:auto;align-self:center}
-.wbadge.ok{background:rgba(62,207,142,.2);color:var(--green)}
-.done{display:none;text-align:center;padding:60px 20px}
-.done h2{font-family:'Bebas Neue',sans-serif;font-size:3.5rem;letter-spacing:5px;color:var(--green);margin-bottom:8px}
-.done-stats{display:flex;gap:28px;justify-content:center;margin:28px 0}
-.ds{font-family:'Bebas Neue',sans-serif;font-size:3rem;color:var(--text)}
-.ds span{display:block;font-family:inherit;font-size:.75rem;color:var(--muted);letter-spacing:1px}
-.btn-restart{background:var(--accent);color:#fff;border:none;padding:15px 40px;font-size:1rem;font-weight:700;border-radius:10px;cursor:pointer;font-family:inherit;transition:all .2s}
-.btn-restart:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(91,141,238,.35)}
-.toast{position:fixed;top:70px;right:20px;padding:10px 20px;border-radius:8px;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:2px;pointer-events:none;z-index:999;animation:tin .35s ease,tout 1.8s .35s forwards}
-.toast.ok{background:var(--green);color:#000}
-.toast.ng{background:var(--red);color:#fff}
-@keyframes tin{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
-@keyframes tout{to{opacity:0}}
-.hidden{display:none!important}
-@media(max-width:600px){.face-word{font-size:3rem}.opts{grid-template-columns:1fr}.weng{min-width:110px}}
-</style>
+  <meta name='robots' content='noindex,nofollow'>
+  <meta charset='UTF-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <title>LEAP 単語帳</title>
+  <link href='https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Noto+Sans+JP:wght@300;400;700&family=Bebas+Neue&display=swap' rel='stylesheet'>
+  <style>
+    /* 既存のスタイルを維持 */
+    html, body, div, span, h1, h2, p, a, em, strong, svg, circle, header, main, nav, input, button, label {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #07080f;
+      --s1: #0f1018;
+      --s2: #171825;
+      --s3: #1e2030;
+      --accent: #5b8dee;
+      --green: #3ecf8e;
+      --red: #f06570;
+      --yellow: #f0c05a;
+      --text: #e2e4f0;
+      --muted: #5a5e80;
+      --border: #22243a;
+      --r: 14px;
+    }
+
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .scroll-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 44px;
+      height: 44px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 1000;
+      font-size: 1.2rem;
+      opacity: 0.8;
+    }
+
+    header {
+      background: var(--s1);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.8rem;
+      letter-spacing: 6px;
+      color: var(--accent);
+    }
+
+    .logo em {
+      color: var(--text);
+      font-style: normal;
+    }
+
+    .hstats {
+      display: flex;
+      gap: 20px;
+    }
+
+    .hstat {
+      text-align: center;
+      font-size: .7rem;
+      color: var(--muted);
+      line-height: 1.2;
+    }
+
+    .hstat strong {
+      display: block;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.5rem;
+      letter-spacing: 1px;
+      color: var(--text);
+    }
+
+    .tabs {
+      display: flex;
+      background: var(--s1);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab {
+      flex: 1;
+      padding: 14px;
+      text-align: center;
+      cursor: pointer;
+      font-size: .85rem;
+      color: var(--muted);
+      border-bottom: 2px solid transparent;
+      transition: all .2s;
+      user-select: none;
+    }
+
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+      background: rgba(91, 141, 238, .06);
+    }
+
+    main {
+      flex: 1;
+      max-width: 740px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px 16px;
+    }
+
+    /* ツールバー関連 */
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .tbinput {
+      background: var(--s2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 7px 11px;
+      border-radius: 8px;
+      font-size: .82rem;
+      font-family: inherit;
+    }
+
+    .tbbtn {
+      background: var(--s2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 7px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: .82rem;
+      font-family: inherit;
+      transition: all .2s;
+    }
+
+    .btn-go {
+      background: var(--accent);
+      color: #fff;
+      padding: 8px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 700;
+      border: none;
+    }
+
+    /* プログレスバー */
+    .pgwrap { margin-bottom: 18px; }
+    .pginfo { display: flex; justify-content: space-between; font-size: .75rem; color: var(--muted); margin-bottom: 5px; }
+    .pgbar { height: 4px; background: var(--border); border-radius: 3px; overflow: hidden; }
+    .pgfill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); border-radius: 3px; transition: width .4s; }
+
+    /* カード */
+    .card-scene { perspective: 1200px; cursor: pointer; margin-bottom: 20px; user-select: none; }
+    .card-inner { position: relative; width: 100%; min-height: 260px; transform-style: preserve-3d; transition: transform .55s cubic-bezier(.4, 0, .2, 1); }
+    .card-inner.flip { transform: rotateY(180deg); }
+    .face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: var(--r); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 36px; text-align: center; border: 1px solid var(--border); }
+    .face-front { background: var(--s1); }
+    .face-back { background: var(--s2); border-color: var(--accent); transform: rotateY(180deg); }
+    .face-word { font-family: 'Bebas Neue', sans-serif; font-size: 4.2rem; letter-spacing: 2px; color: var(--text); }
+    .face-eng { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--accent); }
+
+    /* 一覧表示 */
+    .wlist { display: flex; flex-direction: column; gap: 6px; }
+    .wrow {
+      display: flex;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--s1);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      align-items: center;
+      transition: border-color .2s;
+    }
+    .wrow.weak { border-left: 3px solid var(--red); }
+    .wrow.ok { border-left: 3px solid var(--green); }
+    .wnum { font-size: .7rem; color: var(--muted); min-width: 34px; }
+    .weng { font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; color: var(--accent); min-width: 140px; }
+    .wjpn { font-size: .83rem; color: var(--text); flex: 1; }
+
+    /* ★ ステータスバッジをボタン化したスタイル ★ */
+    .wbadge {
+      font-size: .65rem;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: var(--s3);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.2s;
+      min-width: 70px;
+      text-align: center;
+      font-weight: bold;
+      margin-left: auto;
+    }
+    .wbadge:hover { filter: brightness(1.2); }
+    .wbadge.ok {
+      background: rgba(62, 207, 142, .15);
+      color: var(--green);
+      border-color: var(--green);
+    }
+    .wbadge.weak {
+      background: rgba(240, 101, 112, .15);
+      color: var(--red);
+      border-color: var(--red);
+    }
+
+    /* トースト・その他 */
+    .toast { position: fixed; top: 70px; right: 20px; padding: 10px 20px; border-radius: 8px; font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; pointer-events: none; z-index: 999; animation: tin .35s ease, tout 1.8s .35s forwards; }
+    .toast.ok { background: var(--green); color: #000; }
+    .toast.ng { background: var(--red); color: #fff; }
+    @keyframes tin { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+    @keyframes tout { to { opacity: 0; } }
+    .hidden { display: none !important; }
+  </style>
 </head>
 <body>
-<button class="scroll-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
-<div id='data-loader' style='padding:20px;background:var(--s2);text-align:center;border-bottom:1px solid var(--border);'>
-  <p style='margin-bottom:12px;font-size:0.9rem;color:var(--muted);'>単語データを読み込んで開始</p>
-  <label style='background:var(--accent);color:#fff;padding:8px 16px;border-radius:var(--r);cursor:pointer;font-weight:bold;'>
-    ファイルを選択
-    <input type='file' accept='.json' onchange='loadData(event)' style='display:none;'>
-  </label>
-</div>
-<header>
-  <div class="logo">LEAP <em>単語帳</em></div>
-  <div class="hstats" style="align-items:center;">
-    <div class="hstat" style="position:relative;width:46px;height:46px;margin-right:4px;">
-      <svg viewBox="0 0 36 36" style="transform:rotate(-90deg);width:100%;height:100%;">
-        <circle cx="18" cy="18" r="16" fill="none" stroke="var(--border)" stroke-width="3.5"></circle>
-        <circle id="chart-ng" cx="18" cy="18" r="16" fill="none" stroke="var(--red)" stroke-width="3.5" stroke-dasharray="0 100" stroke-linecap="round" style="transition:stroke-dasharray 0.5s ease;"></circle>
-        <circle id="chart-fill" cx="18" cy="18" r="16" fill="none" stroke="var(--green)" stroke-width="3.5" stroke-dasharray="0 100" stroke-linecap="round" style="transition:stroke-dasharray 0.5s ease;"></circle>
-      </svg>
-      <div id="chart-text" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'Bebas Neue';color:var(--text);">0%</div>
-    </div>
-    <div class="hstat"><strong id="h-range">100</strong>範囲</div>
-    <div class="hstat"><strong id="h-done">0</strong>完了</div>
-    <div class="hstat"><strong id="h-ok">0</strong>正解</div>
+  <button class='scroll-btn' onclick='window.scrollTo({top:0,behavior:`smooth`})'>↑</button>
+
+  <div id='data-loader' style='padding:20px;background:var(--s2);text-align:center;border-bottom:1px solid var(--border);'>
+    <label style='background:var(--accent);color:#fff;padding:8px 16px;border-radius:var(--r);cursor:pointer;font-weight:bold;'>
+      ファイルを選択
+      <input type='file' accept='.json' onchange='loadData(event)' style='display:none;'>
+    </label>
   </div>
-</header>
-<div class="tabs">
-  <div class="tab active" onclick="switchTab('flash')">📇 フラッシュカード</div>
-  <div class="tab" onclick="switchTab('quiz')">🎯 4択クイズ</div>
-  <div class="tab" onclick="switchTab('list')">📋 一覧・検索</div>
-  <div class="tab" onclick="switchTab('weak')">⚠️ 苦手単語</div>
-</div>
-<main>
-<div id="pane-flash">
-  <div class="toolbar">
-    <div class="range-row">
-      No.<input type="number" id="f-from" class="tbinput" value="1" min="1" max="1935">〜
-      <input type="number" id="f-to" class="tbinput" value="100" min="1" max="1935">
-      <button class="btn-go" onclick="applyRange()">適用</button>
-    </div>
-    <button class="tbbtn" id="shuf-btn" onclick="toggleShuffle()">シャッフル</button>
-    <button class="tbbtn" id="dir-btn" onclick="toggleDir()">英→日</button>
-  </div>
-  <div class="pgwrap">
-    <div class="pginfo"><span id="f-prog">0 / 0</span><span id="f-pct">0%</span></div>
-    <div class="pgbar"><div class="pgfill" id="f-fill" style="width:0%"></div></div>
-  </div>
-  <div class="card-scene" onclick="flipCard()">
-    <div class="card-inner" id="card-inner">
-      <div class="face face-front">
-        <div class="face-num" id="f-num">No. 1</div>
-        <div class="face-tag" id="f-front-tag">英語</div>
-        <div class="face-word" id="f-word">—</div>
-        <div class="face-sub">タップで意味を確認</div>
+
+  <header>
+    <div class='logo'>LEAP <em>単語帳</em></div>
+    <div class='hstats' style='align-items:center;'>
+      <div class='hstat' style='position:relative;width:46px;height:46px;margin-right:4px;'>
+        <svg viewBox='0 0 36 36' style='transform:rotate(-90deg);width:100%;height:100%;'>
+          <circle cx='18' cy='18' r='16' fill='none' stroke='var(--border)' stroke-width='3.5'></circle>
+          <circle id='chart-ng' cx='18' cy='18' r='16' fill='none' stroke='var(--red)' stroke-width='3.5' stroke-dasharray='0 100' stroke-linecap='round' style='transition:stroke-dasharray 0.5s ease;'></circle>
+          <circle id='chart-fill' cx='18' cy='18' r='16' fill='none' stroke='var(--green)' stroke-width='3.5' stroke-dasharray='0 100' stroke-linecap='round' style='transition:stroke-dasharray 0.5s ease;'></circle>
+        </svg>
+        <div id='chart-text' style='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:`Bebas Neue`;color:var(--text);'>0%</div>
       </div>
-      <div class="face face-back">
-        <div class="face-num" id="b-num">No. 1</div>
-        <div class="face-eng" id="b-eng">—</div>
-        <div class="face-tag">意味</div>
-        <div class="face-meaning" id="b-meaning">—</div>
+      <div class='hstat'><strong id='h-range'>0</strong>範囲</div>
+      <div class='hstat'><strong id='h-done'>0</strong>完了</div>
+      <div class='hstat'><strong id='h-ok'>0</strong>正解</div>
+    </div>
+  </header>
+
+  <div class='tabs'>
+    <div class='tab active' onclick='switchTab(`flash`)'>📇 フラッシュカード</div>
+    <div class='tab' onclick='switchTab(`quiz`)'>🎯 4択クイズ</div>
+    <div class='tab' onclick='switchTab(`list`)'>📋 一覧・検索</div>
+    <div class='tab' onclick='switchTab(`weak`)'>⚠️ 苦手単語</div>
+  </div>
+
+  <main>
+    <div id='pane-flash'>
+      <div class='toolbar'>
+        <div class='range-row'>
+          No.<input type='number' id='f-from' class='tbinput' value='1' min='1'>〜
+          <input type='number' id='f-to' class='tbinput' value='100' min='1'>
+          <button class='btn-go' onclick='applyRange()'>適用</button>
+        </div>
+        <button class='tbbtn' id='shuf-btn' onclick='toggleShuffle()'>シャッフル</button>
+      </div>
+      <div class='pgwrap'>
+        <div class='pginfo'><span id='f-prog'>0 / 0</span><span id='f-pct'>0%</span></div>
+        <div class='pgbar'><div class='pgfill' id='f-fill' style='width:0%'></div></div>
+      </div>
+      <div class='card-scene' onclick='flipCard()'>
+        <div class='card-inner' id='card-inner'>
+          <div class='face face-front'>
+            <div class='face-num' id='f-num'>No. 1</div>
+            <div class='face-word' id='f-word'>—</div>
+            <div class='face-sub'>タップで意味を確認</div>
+          </div>
+          <div class='face face-back'>
+            <div class='face-num' id='b-num'>—</div>
+            <div class='face-eng' id='b-eng'>—</div>
+            <div class='face-meaning' id='b-meaning'>—</div>
+          </div>
+        </div>
+      </div>
+      <div class='btnrow'>
+        <button class='btn btn-ok' onclick='vote(true)'>✓ 覚えた</button>
+        <button class='btn btn-flip' onclick='flipCard()'>↺</button>
+        <button class='btn btn-ng' onclick='vote(false)'>✗ もう一度</button>
+      </div>
+      <div class='btnrow'>
+        <button class='btn btn-nav' onclick='go(-1)'>← 前へ</button>
+        <button class='btn btn-nav' onclick='go(1)'>次へ →</button>
+      </div>
+      <div class='done' id='f-done' style='display:none; text-align:center; padding:40px;'>
+        <h2>COMPLETE!</h2>
+        <button class='btn-restart' onclick='restartFlash()'>もう一度</button>
       </div>
     </div>
-  </div>
-  <div class="btnrow">
-    <button class="btn btn-ok" onclick="vote(true)">✓ 覚えた</button>
-    <button class="btn btn-flip" onclick="flipCard()">↺</button>
-    <button class="btn btn-ng" onclick="vote(false)">✗ もう一度</button>
-  </div>
-  <div class="btnrow">
-    <button class="btn btn-nav" onclick="go(-1)">← 前へ</button>
-    <button class="btn btn-nav" onclick="go(1)">次へ →</button>
-  </div>
-  <div class="done" id="f-done">
-    <h2>COMPLETE!</h2>
-    <p style="color:var(--muted)">このセットを終了しました</p>
-    <div class="done-stats">
-      <div class="ds" id="d-ok">0<span>正解</span></div>
-      <div class="ds" id="d-ng">0<span>不正解</span></div>
-      <div class="ds" id="d-pct">—<span>正答率</span></div>
+
+    <div id='pane-quiz' class='hidden'>
+      <div class='toolbar'>
+        <div class='range-row'>
+          No.<input type='number' id='q-from' class='tbinput' value='1'>〜
+          <input type='number' id='q-to' class='tbinput' value='100'>
+          <button class='btn-go' onclick='applyQuizRange()'>適用</button>
+        </div>
+      </div>
+      <div class='qcard'>
+        <div class='qword' id='q-word'>—</div>
+      </div>
+      <div class='opts' id='q-opts'></div>
     </div>
-    <div id="f-wrong-list" class="wlist" style="margin-top:24px;text-align:left;max-height:300px;overflow-y:auto;border-top:1px solid var(--border);padding-top:16px;"></div>
-    <button class="btn-restart" onclick="restartFlash()" style="margin-top:24px">もう一度</button>
-  </div>
-</div>
-<div id="pane-quiz" class="hidden">
-  <div class="toolbar">
-    <div class="range-row">
-      No.<input type="number" id="q-from" class="tbinput" value="1" min="1" max="1935">〜
-      <input type="number" id="q-to" class="tbinput" value="100" min="1" max="1935">
-      <button class="btn-go" onclick="applyQuizRange()">適用</button>
+
+    <div id='pane-list' class='hidden'>
+      <div class='search-wrap'>
+        <input class='search' type='text' id='search' placeholder='単語や意味で検索' oninput='renderList()'>
+      </div>
+      <div class='wlist' id='wlist'></div>
     </div>
-    <button class="tbbtn" id="qdir-btn" onclick="toggleQDir()">英→日</button>
-  </div>
-  <div class="pgwrap">
-    <div class="pginfo"><span id="q-prog">0 / 0</span><span id="q-pct">0%</span></div>
-    <div class="pgbar"><div class="pgfill" id="q-fill" style="width:0%"></div></div>
-  </div>
-  <div class="qcard">
-    <div class="qlabel" id="q-label">この単語の意味は？</div>
-    <div class="qword" id="q-word">—</div>
-    <div class="qjp hidden" id="q-jp">—</div>
-  </div>
-  <div class="opts" id="q-opts"></div>
-  <div class="done" id="q-done">
-    <h2>COMPLETE!</h2>
-    <p style="color:var(--muted)">クイズ終了！</p>
-    <div class="done-stats">
-      <div class="ds" id="qd-ok">0<span>正解</span></div>
-      <div class="ds" id="qd-ng">0<span>不正解</span></div>
-      <div class="ds" id="qd-pct">—<span>正答率</span></div>
+
+    <div id='pane-weak' class='hidden'>
+      <div id='weak-empty' style='text-align:center;padding:60px;color:var(--muted)'>苦手単語はありません</div>
+      <div class='wlist' id='weak-list'></div>
     </div>
-    <button class="btn-restart" onclick="restartQuiz()">もう一度</button>
-  </div>
-</div>
-<div id="pane-list" class="hidden">
-  <div class="search-wrap">
-    <input class="search" type="text" id="search" placeholder="単語や意味で検索（例: agree, 賛成）" oninput="renderList()">
-    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
-      <label style="font-size:0.8rem;color:var(--muted)">No.</label>
-      <input type="number" id="jump-no" class="tbinput" placeholder="例: 777" style="width:80px">
-      <button class="btn-go" onclick="jumpToNo()">ジャンプ</button>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:8px;overflow-x:auto;padding-bottom:8px;">
-      <button class="tbbtn" onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})">一番下へ</button>
-      <button class="tbbtn" onclick="scrollToId(500)">500〜</button>
-      <button class="tbbtn" onclick="scrollToId(1000)">1000〜</button>
-      <button class="tbbtn" onclick="scrollToId(1500)">1500〜</button>
-    </div>
-  </div>
-  <div class="wlist" id="wlist"></div>
-</div>
-<div id="pane-weak" class="hidden">
-  <div class="toolbar hidden" id="weak-toolbar" style="margin-bottom:20px;">
-    <div class="range-row">
-      No.<input type="number" id="w-from" class="tbinput" value="1" min="1" max="1935" oninput="renderWeak()">〜
-      <input type="number" id="w-to" class="tbinput" value="100" min="1" max="1935" oninput="renderWeak()">
-    </div>
-  </div>
-  <div id="weak-empty" style="text-align:center;padding:60px;color:var(--muted)">
-    <div style="font-size:3rem;margin-bottom:12px">✨</div>
-    <div>苦手単語はまだありません</div>
-    <div style="font-size:.8rem;margin-top:8px">フラッシュカードで「もう一度」を押した単語がここに貯まります</div>
-  </div>
-  <div class="wlist" id="weak-list"></div>
-  <div style="margin-top:16px;text-align:center" id="weak-study-wrap" class="hidden">
-    <button class="btn-restart" onclick="studyWeak()">苦手単語を集中練習</button>
-  </div>
-</div>
-</main>
-<script>
-function loadData(event){
-  const file=event.target.files[0];
-  if(!file)return;
-  const reader=new FileReader();
-  reader.onload=function(e){
-    try{
-      ALL=JSON.parse(e.target.result);
-      const count=ALL.length;
-      document.querySelectorAll('input[type="number"][max]').forEach(input=>{
-        input.max=count;
-        if(input.id.endsWith('-to')&&input.value=="100")input.value=count;
+  </main>
+
+  <script>
+    let ALL = [];
+    let deck = [], idx = 0, flipped = false, shuffled = false, okCount = 0, ngCount = 0, voted = new Set();
+    let weakSet = new Set(JSON.parse(localStorage.getItem('leap_weak') || '[]'));
+    let okSet = new Set(JSON.parse(localStorage.getItem('leap_ok') || '[]'));
+
+    /** データの保存 **/
+    function saveStatus() {
+      localStorage.setItem('leap_weak', JSON.stringify([...weakSet]));
+      localStorage.setItem('leap_ok', JSON.stringify([...okSet]));
+      updateHdr();
+    }
+
+    /** 1. ステータスを直接切り替える関数 **/
+    function changeStatus(id, event) {
+      event.stopPropagation(); // 行の読み上げクリックを防止
+      
+      if (okSet.has(id)) {
+        // 覚えた -> 苦手
+        okSet.delete(id);
+        weakSet.add(id);
+        showToast('苦手', 'ng');
+      } else if (weakSet.has(id)) {
+        // 苦手 -> 未着手
+        weakSet.delete(id);
+        showToast('リセット', 'ok');
+      } else {
+        // 未着手 -> 覚えた
+        okSet.add(id);
+        showToast('覚えた', 'ok');
+      }
+      
+      saveStatus();
+      renderList();
+      renderWeak();
+    }
+
+    /** 2. 一覧画面の描画（ボタン対応版） **/
+    function renderList() {
+      const q = (document.getElementById('search').value || '').toLowerCase().trim();
+      const el = document.getElementById('wlist');
+      el.innerHTML = '';
+      
+      const src = ALL.filter(w => (w.w + w.m).toLowerCase().includes(q));
+      
+      src.forEach(w => {
+        const isWeak = weakSet.has(w.id);
+        const isOk = okSet.has(w.id);
+        
+        const row = document.createElement('div');
+        row.className = 'wrow' + (isWeak ? ' weak' : (isOk ? ' ok' : ''));
+        row.onclick = () => speech(w.w);
+        
+        let label = '未着手';
+        let badgeClass = 'wbadge';
+        if (isWeak) { label = '苦手'; badgeClass += ' weak'; }
+        else if (isOk) { label = '覚えた'; badgeClass += ' ok'; }
+        
+        row.innerHTML = `
+          <span class='wnum'>${w.id}</span>
+          <span class='weng'>${w.w}</span>
+          <span class='wjpn'>${w.m}</span>
+          <button class='${badgeClass}' onclick='changeStatus(${w.id}, event)'>${label}</button>
+        `;
+        el.appendChild(row);
       });
-      document.getElementById('data-loader').style.display='none';
-      applyRange();applyQuizRange();renderList();renderWeak();
-      showToast('読み込み完了！','ok');
-    }catch(err){alert('エラー：正しいJSONファイルを選択してください');}
-  };
-  reader.readAsText(file);
-}
-let ALL=[];
-let deck=[],idx=0,flipped=false,shuffled=false,dir='en',okCount=0,ngCount=0,voted=new Set();
-let qDeck=[],qIdx=0,qDir='en',qOk=0,qNg=0;
+    }
 
-// ★データ読み込み部分
-let weakSet=new Set(JSON.parse(localStorage.getItem('leap_weak')||'[]'));
-let okSet=new Set(JSON.parse(localStorage.getItem('leap_ok')||'[]'));
-let weakDeck=[],weakMode=false;
+    /** データ読み込み **/
+    function loadData(event) {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        ALL = JSON.parse(e.target.result);
+        document.getElementById('data-loader').style.display = 'none';
+        applyRange();
+        renderList();
+        updateHdr();
+      };
+      reader.readAsText(file);
+    }
 
-// ★データ保存部分
-function saveWeak(){try{localStorage.setItem('leap_weak',JSON.stringify([...weakSet]))}catch(e){}}
-function saveOk(){try{localStorage.setItem('leap_ok',JSON.stringify([...okSet]))}catch(e){}}
+    /** フラッシュカード関連 **/
+    function applyRange() {
+      const f = parseInt(document.getElementById('f-from').value) || 1;
+      const t = parseInt(document.getElementById('f-to').value) || 100;
+      deck = ALL.filter(w => w.id >= f && w.id <= t);
+      if (shuffled) shuffle(deck);
+      idx = 0; voted.clear(); okCount = 0; ngCount = 0;
+      updateCard();
+      updateHdr();
+    }
 
-function switchTab(t){
-  ['flash','quiz','list','weak'].forEach(x=>{
-    document.getElementById('pane-'+x).classList.toggle('hidden',x!==t);
-    document.querySelectorAll('.tab')[['flash','quiz','list','weak'].indexOf(x)].classList.toggle('active',x===t);
-  });
-  if(t==='list')renderList();
-  if(t==='weak')renderWeak();
-}
-function getRange(){
-  const f=Math.max(1,parseInt(document.getElementById('f-from').value)||1);
-  const t=Math.max(f,parseInt(document.getElementById('f-to').value)||100);
-  return ALL.filter(w=>w.id>=f&&w.id<=t);
-}
-function applyRange(){
-  deck=getRange();
-  if(shuffled)deck=shuffle([...deck]);
-  idx=0;okCount=0;ngCount=0;voted.clear();weakMode=false;
-  document.getElementById('f-done').style.display='none';
-  updateCard();updateHdr();
-}
-function toggleShuffle(){
-  shuffled=!shuffled;
-  document.getElementById('shuf-btn').classList.toggle('on',shuffled);
-  document.getElementById('shuf-btn').textContent=shuffled?'シャッフル ON':'シャッフル';
-  applyRange();
-}
-function toggleDir(){
-  dir=dir==='en'?'ja':'en';
-  document.getElementById('dir-btn').textContent=dir==='en'?'英→日':'日→英';
-  updateCard();
-}
-function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
-function flipCard(){
-  flipped=!flipped;
-  document.getElementById('card-inner').classList.toggle('flip',flipped);
-}
-function updateCard(){
-  if(!deck.length)return;
-  const cardInner=document.getElementById('card-inner');
-  cardInner.style.transition='none';flipped=false;cardInner.classList.remove('flip');void cardInner.offsetWidth;
-  const w=deck[idx];
-  document.getElementById('f-num').textContent='No. '+w.id;
-  document.getElementById('b-num').textContent='No. '+w.id;
-  if(dir==='en'){
-    document.getElementById('f-front-tag').textContent='英語';
-    document.getElementById('f-word').textContent=w.w;
-    document.getElementById('f-word').style.fontSize='';
-    document.getElementById('b-eng').textContent=w.w;
-    document.getElementById('b-meaning').textContent=w.m;
-  }else{
-    document.getElementById('f-front-tag').textContent='日本語';
-    document.getElementById('f-word').style.fontSize='1.8rem';
-    document.getElementById('f-word').textContent=w.m;
-    document.getElementById('b-eng').textContent=w.w;
-    document.getElementById('b-meaning').textContent=w.m;
-  }
-  const done=voted.size,total=deck.length,pct=total?Math.round(done/total*100):0;
-  document.getElementById('f-prog').textContent=(idx+1)+' / '+total;
-  document.getElementById('f-pct').textContent=pct+'%';
-  document.getElementById('f-fill').style.width=pct+'%';
-  if(dir==='en'&&!flipped)speech(w.w);
-  setTimeout(()=>{cardInner.style.transition='transform .55s cubic-bezier(.4,0,.2,1)'},20);
-}
-function vote(ok){
-  if(!deck.length)return;
-  if(!flipped)flipCard();
-  const w=deck[idx];
-  if(voted.has(idx))return;
-  voted.add(idx);
-  if(ok){
-    okCount++;okSet.add(w.id);weakSet.delete(w.id);
-  }else{
-    ngCount++;weakSet.add(w.id);okSet.delete(w.id);
-  }
-  saveOk();saveWeak();
-  updateHdr();
-  showToast(ok?'✓ 正解':'✗ もう一度',ok?'ok':'ng');
-  setTimeout(()=>go(1),1200);
-}
-function go(d){
-  if(!deck.length)return;
-  idx=(idx+d+deck.length)%deck.length;
-  if(d===1&&idx===0&&voted.size===deck.length){showDone();return}
-  updateCard();
-}
-function showDone(){
-  const pct=okCount+ngCount?Math.round(okCount/(okCount+ngCount)*100):0;
-  document.getElementById('d-ok').childNodes[0].textContent=okCount;
-  document.getElementById('d-ng').childNodes[0].textContent=ngCount;
-  document.getElementById('d-pct').childNodes[0].textContent=pct+'%';
-  const listEl=document.getElementById('f-wrong-list');listEl.innerHTML='';
-  const wrongs=deck.filter(w=>weakSet.has(w.id));
-  if(wrongs.length>0){
-    const title=document.createElement('p');
-    title.style.cssText='color:var(--red);font-size:0.85rem;font-weight:bold;margin-bottom:12px;';
-    title.textContent='要復習：';listEl.appendChild(title);
-    wrongs.forEach(w=>{
-      const row=document.createElement('div');row.className='wrow weak';
-      row.innerHTML=`<span class="wnum">${w.id}</span><span class="weng">${w.w}</span><span class="wjpn">${w.m}</span>`;
-      listEl.appendChild(row);
-    });
-    listEl.style.display='block';
-  }else{listEl.style.display='none';}
-  document.getElementById('f-done').style.display='block';updateHdr();
-}
-function restartFlash(){document.getElementById('f-done').style.display='none';applyRange();}
-function updateHdr(){
-  const total=deck.length,done=voted.size,ok=okCount,ng=ngCount;
-  const okPct=total?Math.round(ok/total*100):0;
-  const ngPct=total?Math.round(ng/total*100):0;
-  const scorePct=done?Math.round(ok/done*100):0;
-  document.getElementById('h-range').textContent=total;
-  document.getElementById('h-done').textContent=done;
-  document.getElementById('h-ok').textContent=ok;
-  const circleOk=document.getElementById('chart-fill');
-  const circleNg=document.getElementById('chart-ng');
-  const text=document.getElementById('chart-text');
-  if(circleOk&&circleNg&&text){
-    circleNg.style.strokeDasharray=`${ngPct+okPct} 100`;
-    circleOk.style.strokeDasharray=`${okPct} 100`;
-    text.textContent=scorePct+'%';
-  }
-}
-function studyWeak(){
-  const ws=[...weakSet];
-  const from=parseInt(document.getElementById('w-from').value)||1;
-  const to=parseInt(document.getElementById('w-to').value)||1935;
-  if(!ws.length)return;
-  deck=ALL.filter(w=>ws.includes(w.id)&&w.id>=from&&w.id<=to);
-  if(!deck.length){showToast('範囲内に苦手単語はありません','ng');return}
-  if(shuffled)deck=shuffle([...deck]);
-  idx=0;okCount=0;ngCount=0;voted.clear();weakMode=true;
-  document.getElementById('f-done').style.display='none';
-  updateCard();updateHdr();switchTab('flash');
-}
-function getQuizRange(){
-  const f=Math.max(1,parseInt(document.getElementById('q-from').value)||1);
-  const t=Math.max(f,parseInt(document.getElementById('q-to').value)||100);
-  return ALL.filter(w=>w.id>=f&&w.id<=t);
-}
-function applyQuizRange(){
-  qDeck=shuffle(getQuizRange());qIdx=0;qOk=0;qNg=0;
-  document.getElementById('q-done').style.display='none';renderQuestion();
-}
-function toggleQDir(){
-  qDir=qDir==='en'?'ja':'en';
-  document.getElementById('qdir-btn').textContent=qDir==='en'?'英→日':'日→英';
-  applyQuizRange();
-}
-function renderQuestion(){
-  if(!qDeck.length)return;
-  if(qIdx>=qDeck.length){showQDone();return}
-  const w=qDeck[qIdx];
-  const total=qDeck.length,pct=Math.round(qIdx/total*100);
-  document.getElementById('q-prog').textContent=(qIdx+1)+' / '+total;
-  document.getElementById('q-pct').textContent=pct+'%';
-  document.getElementById('q-fill').style.width=pct+'%';
-  if(qDir==='en'){
-    document.getElementById('q-label').textContent='この単語の意味は？';
-    document.getElementById('q-word').textContent=w.w;
-    document.getElementById('q-word').style.fontSize='';
-    document.getElementById('q-jp').classList.add('hidden');
-  }else{
-    document.getElementById('q-label').textContent='この意味の英単語は？';
-    document.getElementById('q-word').textContent=w.m;
-    document.getElementById('q-word').style.fontSize='1rem';
-    document.getElementById('q-jp').classList.add('hidden');
-  }
-  const pool=ALL.filter(x=>x.id!==w.id);
-  const wrongs=shuffle(pool).slice(0,3);
-  const choices=shuffle([w,...wrongs]);
-  const opts=document.getElementById('q-opts');opts.innerHTML='';
-  choices.forEach(c=>{
-    const btn=document.createElement('button');btn.className='opt';
-    btn.textContent=qDir==='en'?c.m:c.w;
-    btn.onclick=()=>answerQ(btn,c.id===w.id,w);
-    opts.appendChild(btn);
-  });
-}
-function answerQ(btn,correct,w){
-  document.querySelectorAll('.opt').forEach(b=>b.disabled=true);
-  btn.classList.add(correct?'ok':'ng');
-  if(!correct){
-    document.querySelectorAll('.opt').forEach(b=>{
-      if(qDir==='en'?b.textContent===w.m:b.textContent===w.w)b.classList.add('ok');
-    });
-    weakSet.add(w.id);okSet.delete(w.id);
-  }else{
-    weakSet.delete(w.id);okSet.add(w.id);
-    qOk++;
-  }
-  saveOk();saveWeak();
-  showToast(correct?'✓ 正解':'✗ 不正解',correct?'ok':'ng');
-  setTimeout(()=>{qIdx++;renderQuestion()},900);
-}
-function showQDone(){
-  const pct=qOk+qNg?Math.round(qOk/(qOk+qNg)*100):0;
-  document.getElementById('qd-ok').childNodes[0].textContent=qOk;
-  document.getElementById('qd-ng').childNodes[0].textContent=qNg;
-  document.getElementById('qd-pct').childNodes[0].textContent=pct+'%';
-  document.getElementById('q-done').style.display='block';
-}
-function restartQuiz(){document.getElementById('q-done').style.display='none';applyQuizRange()}
-function renderList(){
-  const q=(document.getElementById('search').value||'').toLowerCase().trim();
-  const keywords=q.split(/[\s　]+/).filter(k=>k.length>0);
-  const src=keywords.length>0
-    ?ALL.filter(w=>{const t=(w.w+w.m).toLowerCase();return keywords.some(kw=>t.includes(kw))})
-    :ALL;
-  const el=document.getElementById('wlist');el.innerHTML='';
-  src.forEach(w=>{
-    const isWeak=weakSet.has(w.id),isOk=okSet.has(w.id);
-    const row=document.createElement('div');
-    row.className='wrow'+(isWeak?' weak':(isOk?' ok':''));
-    row.style.cursor='pointer';row.onclick=()=>speech(w.w);
-    let badge='';
-    if(isWeak)badge='<span class="wbadge">苦手</span>';
-    else if(isOk)badge='<span class="wbadge ok">覚えた</span>';
-    row.innerHTML=`<span class="wnum">${w.id}</span><span class="weng">${w.w}</span><span class="wjpn">${w.m}</span>${badge}`;
-    el.appendChild(row);
-  });
-}
-function renderWeak(){
-  const ws=[...weakSet];
-  const from=parseInt(document.getElementById('w-from').value)||1;
-  const to=parseInt(document.getElementById('w-to').value)||1935;
-  const filteredWeak=ALL.filter(w=>ws.includes(w.id)&&w.id>=from&&w.id<=to);
-  document.getElementById('weak-empty').classList.toggle('hidden',ws.length>0);
-  document.getElementById('weak-toolbar').classList.toggle('hidden',ws.length===0);
-  document.getElementById('weak-study-wrap').classList.toggle('hidden',filteredWeak.length===0);
-  const el=document.getElementById('weak-list');el.innerHTML='';
-  filteredWeak.forEach(w=>{
-    const row=document.createElement('div');row.className='wrow weak';
-    row.onclick=()=>speech(w.w);
-    row.innerHTML=`<span class="wnum">${w.id}</span><span class="weng">${w.w}</span><span class="wjpn">${w.m}</span>`;
-    el.appendChild(row);
-  });
-}
-function showToast(msg,type){
-  const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;
-  document.body.appendChild(t);setTimeout(()=>t.remove(),2200);
-}
-document.addEventListener('keydown',e=>{
-  const tab=document.querySelector('.tab.active').textContent;
-  if(tab.includes('フラッシュ')){
-    if(e.key===' '||e.key==='Enter'){e.preventDefault();flipCard()}
-    if(e.key==='ArrowRight')go(1);
-    if(e.key==='ArrowLeft')go(-1);
-    if(e.key==='o'||e.key==='O')vote(true);
-    if(e.key==='x'||e.key==='X')vote(false);
-  }
-});
-applyRange();applyQuizRange();renderList();
-function speech(text){
-  window.speechSynthesis.cancel();
-  const uttr=new SpeechSynthesisUtterance(text);
-  uttr.lang='en-US';uttr.rate=0.9;window.speechSynthesis.speak(uttr);
-}
-function scrollToId(id){
-  const rows=document.querySelectorAll('.wrow');
-  for(let row of rows){
-    const num=parseInt(row.querySelector('.wnum').textContent);
-    if(num>=id){row.scrollIntoView({behavior:'smooth',block:'center'});break}
-  }
-}
-function jumpToNo(){
-  const val=parseInt(document.getElementById('jump-no').value);
-  if(!val)return;
-  scrollToId(val);
-  setTimeout(()=>{
-    const rows=document.querySelectorAll('.wrow');
-    for(let row of rows){
-      const num=parseInt(row.querySelector('.wnum').textContent);
-      if(num===val){
-        row.style.transition='background 0.3s';row.style.background='var(--s3)';
-        setTimeout(()=>row.style.background='var(--s1)',1000);break;
+    function updateCard() {
+      if (!deck.length) return;
+      flipped = false;
+      document.getElementById('card-inner').classList.remove('flip');
+      const w = deck[idx];
+      document.getElementById('f-num').textContent = 'No. ' + w.id;
+      document.getElementById('f-word').textContent = w.w;
+      document.getElementById('b-num').textContent = 'No. ' + w.id;
+      document.getElementById('b-eng').textContent = w.w;
+      document.getElementById('b-meaning').textContent = w.m;
+      
+      document.getElementById('f-prog').textContent = (idx + 1) + ' / ' + deck.length;
+      document.getElementById('f-fill').style.width = ((idx+1)/deck.length*100) + '%';
+    }
+
+    function flipCard() {
+      flipped = !flipped;
+      document.getElementById('card-inner').classList.toggle('flip', flipped);
+    }
+
+    function vote(ok) {
+      const w = deck[idx];
+      if (ok) { okSet.add(w.id); weakSet.delete(w.id); okCount++; }
+      else { weakSet.add(w.id); okSet.delete(w.id); ngCount++; }
+      voted.add(idx);
+      saveStatus();
+      showToast(ok ? 'OK' : 'NG', ok ? 'ok' : 'ng');
+      setTimeout(() => go(1), 1000);
+    }
+
+    function go(d) {
+      idx = (idx + d + deck.length) % deck.length;
+      updateCard();
+    }
+
+    /** 共通・ユーティリティ **/
+    function switchTab(t) {
+      ['flash', 'quiz', 'list', 'weak'].forEach(x => {
+        document.getElementById('pane-' + x).classList.toggle('hidden', x !== t);
+      });
+      document.querySelectorAll('.tab').forEach((el, i) => {
+        el.classList.toggle('active', ['flash', 'quiz', 'list', 'weak'][i] === t);
+      });
+    }
+
+    function updateHdr() {
+      document.getElementById('h-range').textContent = deck.length;
+      document.getElementById('h-done').textContent = okSet.size + weakSet.size;
+      document.getElementById('h-ok').textContent = okSet.size;
+    }
+
+    function speech(text) {
+      window.speechSynthesis.cancel();
+      const uttr = new SpeechSynthesisUtterance(text);
+      uttr.lang = 'en-US';
+      window.speechSynthesis.speak(uttr);
+    }
+
+    function showToast(msg, type) {
+      const t = document.createElement('div');
+      t.className = 'toast ' + type;
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 1500);
+    }
+
+    function shuffle(a) {
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
       }
     }
-  },500);
-}
-</script>
+
+    function renderWeak() {
+      const ws = [...weakSet];
+      const el = document.getElementById('weak-list');
+      el.innerHTML = '';
+      const filtered = ALL.filter(w => ws.includes(w.id));
+      document.getElementById('weak-empty').classList.toggle('hidden', filtered.length > 0);
+      filtered.forEach(w => {
+        const row = document.createElement('div');
+        row.className = 'wrow weak';
+        row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${w.m}</span>`;
+        el.appendChild(row);
+      });
+    }
+  </script>
 </body>
 </html>
