@@ -108,26 +108,37 @@
     .face-eng { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--accent); margin-bottom: 15px; }
     .face-num { font-size: 0.8rem; color: var(--muted); }
 
-    .speaker-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.5rem; margin-top: 10px; transition: color 0.2s; }
-    .speaker-btn:hover { color: var(--accent); }
-
     .btnrow { display: flex; gap: 8px; margin-bottom: 10px; }
     .btn { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--s2); color: var(--text); cursor: pointer; font-size: 0.9rem; font-weight: bold; }
     .btn:active { transform: scale(0.98); }
     .btn-ok { border-color: var(--green); color: var(--green); }
     .btn-ng { border-color: var(--red); color: var(--red); }
 
+    .qcard { background: var(--s1); border: 1px solid var(--border); border-radius: var(--r); padding: 40px 20px; text-align: center; margin-bottom: 20px; }
+    .qword { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; color: var(--text); }
+    .opts { display: flex; flex-direction: column; gap: 10px; }
+    .opt { background: var(--s2); border: 1px solid var(--border); padding: 15px; border-radius: 10px; cursor: pointer; text-align: left; font-size: 0.95rem; }
+    .opt.correct { background: var(--green) !important; color: #000; font-weight: bold; }
+    .opt.wrong { background: var(--red) !important; color: #fff; }
+
+    .wlist { display: flex; flex-direction: column; gap: 8px; }
     .wrow { display: flex; gap: 12px; padding: 12px 16px; background: var(--s1); border: 1px solid var(--border); border-radius: 9px; align-items: center; }
-    .weng { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; color: var(--accent); min-width: 100px; }
-    .voice-btn { cursor: pointer; color: var(--muted); font-size: 1rem; }
+    .wrow.weak { border-left: 4px solid var(--red); }
+    .wrow.ok { border-left: 4px solid var(--green); }
+    .wnum { font-size: .7rem; color: var(--muted); min-width: 30px; }
+    .weng { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; color: var(--accent); min-width: 100px; cursor: pointer; }
+    .wjpn { font-size: .85rem; color: var(--text); flex: 1; white-space: pre-wrap; }
+    .wbadge { font-size: .65rem; padding: 5px 8px; border-radius: 6px; background: var(--s3); color: var(--muted); border: 1px solid var(--border); cursor: pointer; min-width: 65px; text-align: center; font-weight: bold; }
+    .wbadge.ok { background: rgba(62, 207, 142, .15); color: var(--green); border-color: var(--green); }
+    .wbadge.weak { background: rgba(240, 101, 112, .15); color: var(--red); border-color: var(--red); }
 
     .hidden { display: none !important; }
 
-    /* 印刷専用設定 */
     @media print {
       body * { display: none !important; }
       #print-container { display: block !important; position: absolute; left: 0; top: 0; width: 100%; color: #000; background: #fff; }
       #print-container * { display: block !important; visibility: visible; }
+      
       .print-title { font-size: 14px; font-weight: bold; margin-bottom: 10px; text-align: center; border-bottom: 1px solid #000; padding-bottom: 4px; }
       .print-columns { column-count: 3; column-gap: 20px; column-rule: 0.5px solid #eee; }
       .print-item { display: flex; border-bottom: 0.5px solid #ddd; padding: 4px 0; align-items: center; page-break-inside: avoid; }
@@ -136,6 +147,12 @@
       .print-eng { font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: bold; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .print-line { width: 40px; border-bottom: 0.5px dotted #aaa; height: 10px; margin-left: 5px; }
       @page { size: A4; margin: 10mm; }
+    }
+    
+    @media (max-width: 600px) {
+      .face-word { font-size: 2.8rem; }
+      .wrow { flex-wrap: wrap; }
+      .wbadge { margin-left: auto; }
     }
   </style>
 </head>
@@ -191,7 +208,6 @@
           <div class='face face-front'>
             <div class='face-num' id='f-num'>—</div>
             <div class='face-word' id='f-word'>—</div>
-            <button class='speaker-btn' onclick='event.stopPropagation(); playVoice()'>🔊</button>
           </div>
           <div class='face face-back'>
             <div class='face-num' id='b-num'>—</div>
@@ -212,6 +228,12 @@
     </div>
 
     <div id='pane-quiz' class='hidden'>
+      <div class='toolbar'>
+        <div class='range-row'>
+          No.<input type='number' id='q-from' class='tbinput' value='1'>〜<input type='number' id='q-to' class='tbinput' value='100'>
+          <button class='btn-go' onclick='applyQuizRange()'>適用</button>
+        </div>
+      </div>
       <div class='qcard'><div class='qword' id='q-word'>—</div></div>
       <div class='opts' id='q-opts'></div>
     </div>
@@ -222,6 +244,12 @@
     </div>
 
     <div id='pane-weak' class='hidden'>
+      <div class='toolbar' style='justify-content: center; background: var(--s2); padding: 15px; border-radius: var(--r); margin-bottom: 20px;'>
+        <div class='range-row'>
+          No.<input type='number' id='w-from' class='tbinput' value='1'>〜<input type='number' id='w-to' class='tbinput' value='100'>
+          <button class='btn-go' onclick='applyWeakOnlyFromWeakTab()'>苦手フラッシュ開始</button>
+        </div>
+      </div>
       <div style='text-align: center; margin-bottom: 20px;'>
         <button class='tbbtn' style='background: var(--red); color: #fff; border: none; padding: 12px 24px; font-weight: bold; border-radius: 10px; cursor: pointer;' onclick='printWeakList()'>⚠️ 苦手リストを3列PDFで印刷</button>
       </div>
@@ -235,21 +263,27 @@
     let weakSet = new Set(JSON.parse(localStorage.getItem('leap_weak') || '[]'));
     let okSet = new Set(JSON.parse(localStorage.getItem('leap_ok') || '[]'));
 
-    // 音声再生関数
-    function playVoice(text) {
-      const target = text || (deck[idx] ? deck[idx].w : '');
-      if (!target) return;
-      window.speechSynthesis.cancel(); // 連続再生防止
-      const uttr = new SpeechSynthesisUtterance(target);
+    function speak(text) {
+      if (!text) return;
+      speechSynthesis.cancel();
+      const uttr = new SpeechSynthesisUtterance(text);
       uttr.lang = 'en-US';
-      uttr.rate = 0.9;
-      window.speechSynthesis.speak(uttr);
+      uttr.rate = 1.0;
+      speechSynthesis.speak(uttr);
     }
 
     function saveStatus() {
       localStorage.setItem('leap_weak', JSON.stringify([...weakSet]));
       localStorage.setItem('leap_ok', JSON.stringify([...okSet]));
       updateHdr();
+    }
+
+    function changeStatus(id, event) {
+      if(event) event.stopPropagation();
+      if (okSet.has(id)) { okSet.delete(id); weakSet.add(id); }
+      else if (weakSet.has(id)) { weakSet.delete(id); }
+      else { okSet.add(id); }
+      saveStatus(); renderList(); renderWeak();
     }
 
     function loadData(event) {
@@ -266,7 +300,23 @@
       const f = parseInt(document.getElementById('f-from').value) || 1;
       const t = parseInt(document.getElementById('f-to').value) || 2000;
       deck = ALL.filter(w => w.id >= f && w.id <= t);
-      idx = 0; if (shuffled) shuffle(deck); updateCard();
+      startDeck();
+    }
+
+    function applyWeakOnlyFromWeakTab() {
+      const f = parseInt(document.getElementById('w-from').value) || 1;
+      const t = parseInt(document.getElementById('w-to').value) || 2000;
+      deck = ALL.filter(w => w.id >= f && w.id <= t && weakSet.has(w.id));
+      if(!deck.length) { alert('範囲内に苦手単語はありません'); return; }
+      document.getElementById('f-from').value = f;
+      document.getElementById('f-to').value = t;
+      switchTab('flash');
+      startDeck();
+    }
+
+    function startDeck() {
+      if (shuffled) shuffle(deck);
+      idx = 0; updateCard();
     }
 
     function updateCard() {
@@ -278,16 +328,17 @@
       document.getElementById('f-prog').textContent = (idx + 1) + ' / ' + deck.length;
       document.getElementById('f-fill').style.width = ((idx+1)/deck.length*100) + '%';
       document.getElementById('f-pct').textContent = Math.round((idx+1)/deck.length*100) + '%';
+      speak(w.w);
     }
 
-    function flipCard() {
-      if(isAnimating) return;
-      const inner = document.getElementById('card-inner');
-      inner.classList.toggle('flip');
-      // 回転時に発音（表に戻る時は鳴らさない）
-      if (inner.classList.contains('flip')) {
-        playVoice();
-      }
+    function flipCard() { 
+      if(!isAnimating) {
+        const inner = document.getElementById('card-inner');
+        inner.classList.toggle('flip');
+        if (inner.classList.contains('flip') && deck[idx]) {
+          speak(deck[idx].w);
+        }
+      } 
     }
 
     function vote(ok) {
@@ -297,9 +348,15 @@
       if (ok) { okSet.add(w.id); weakSet.delete(w.id); }
       else { weakSet.add(w.id); okSet.delete(w.id); }
       saveStatus();
-      document.getElementById('card-inner').classList.add('flip');
+      
+      const inner = document.getElementById('card-inner');
+      if (!inner.classList.contains('flip')) {
+        inner.classList.add('flip');
+        speak(w.w);
+      }
+      
       setTimeout(() => {
-        document.getElementById('card-inner').classList.remove('flip');
+        inner.classList.remove('flip');
         setTimeout(() => {
           idx = (idx + 1) % deck.length;
           updateCard();
@@ -321,29 +378,70 @@
       const btn = document.getElementById('shuf-btn');
       btn.style.background = shuffled ? 'var(--accent)' : 'var(--s2)';
       btn.style.color = shuffled ? '#fff' : 'var(--muted)';
-      applyRange();
+      startDeck();
     }
 
     function printWeakList() {
       const list = ALL.filter(w => weakSet.has(w.id));
       if(!list.length) { alert('苦手単語がありません'); return; }
-      const pc = document.getElementById('print-container');
-      let html = `<div class='print-title'>LEAP 苦手単語 (${new Date().toLocaleDateString()})</div><div class='print-columns'>`;
+      const printContainer = document.getElementById('print-container');
+      let html = `<div class='print-title'>LEAP 苦手単語チェックシート (${new Date().toLocaleDateString()})</div>`;
+      html += `<div class='print-columns'>`;
       list.forEach(w => {
         html += `<div class='print-item'><div class='print-check'></div><div class='print-no'>${w.id}</div><div class='print-eng'>${w.w}</div><div class='print-line'></div></div>`;
       });
-      pc.innerHTML = html + `</div>`;
+      html += `</div>`;
+      printContainer.innerHTML = html;
       window.print();
-      setTimeout(() => { pc.innerHTML = ''; }, 800);
+      setTimeout(() => { printContainer.innerHTML = ''; }, 800);
+    }
+
+    let qDeck = [], qIdx = 0;
+    function applyQuizRange() {
+      const f = parseInt(document.getElementById('q-from').value) || 1;
+      const t = parseInt(document.getElementById('q-to').value) || 2000;
+      qDeck = ALL.filter(w => w.id >= f && w.id <= t);
+      startQuiz();
+    }
+
+    function startQuiz() { shuffle(qDeck); qIdx = 0; nextQuestion(); }
+
+    function nextQuestion() {
+      if (qIdx >= qDeck.length) { alert('終了'); return; }
+      const correct = qDeck[qIdx];
+      const choices = [correct, ...shuffle([...ALL.filter(w => w.id !== correct.id)]).slice(0, 3)];
+      shuffle(choices);
+      document.getElementById('q-word').textContent = correct.w;
+      speak(correct.w);
+      const optContainer = document.getElementById('q-opts');
+      optContainer.innerHTML = '';
+      choices.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'opt'; div.textContent = c.m;
+        div.onclick = () => {
+          if (div.classList.contains('correct') || div.classList.contains('wrong')) return;
+          if (c.id === correct.id) {
+            div.classList.add('correct'); okSet.add(correct.id); weakSet.delete(correct.id);
+            saveStatus(); setTimeout(() => { qIdx++; nextQuestion(); }, 600);
+          } else {
+            div.classList.add('wrong'); weakSet.add(correct.id); okSet.delete(correct.id); saveStatus();
+          }
+        };
+        optContainer.appendChild(div);
+      });
     }
 
     function renderList() {
       const q = (document.getElementById('search').value || '').toLowerCase();
       const el = document.getElementById('wlist'); el.innerHTML = '';
       ALL.filter(w => w.w.toLowerCase().includes(q) || w.m.includes(q)).forEach(w => {
+        const isW = weakSet.has(w.id), isO = okSet.has(w.id);
         const row = document.createElement('div');
-        row.className = 'wrow';
-        row.innerHTML = `<span class='voice-btn' onclick='playVoice("${w.w}")'>🔊</span><span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${w.m}</span>`;
+        row.className = 'wrow' + (isW ? ' weak' : isO ? ' ok' : '');
+        let label = '未着手', bCls = 'wbadge';
+        if (isW) { label = '苦手'; bCls += ' weak'; } else if (isO) { label = '覚えた'; bCls += ' ok'; }
+        row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${w.m}</span><button class='${bCls}' onclick='changeStatus(${w.id}, event)'>${label}</button>`;
+        row.querySelector('.weng').onclick = () => speak(w.w);
         el.appendChild(row);
       });
     }
@@ -355,7 +453,8 @@
       list.forEach(w => {
         const row = document.createElement('div');
         row.className = 'wrow weak';
-        row.innerHTML = `<span class='voice-btn' onclick='playVoice("${w.w}")'>🔊</span><span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${w.m}</span>`;
+        row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${w.m}</span><button class='wbadge weak' onclick='changeStatus(${w.id}, event)'>苦手</button>`;
+        row.querySelector('.weng').onclick = () => speak(w.w);
         el.appendChild(row);
       });
     }
@@ -378,7 +477,8 @@
       document.getElementById('h-ok').textContent = okSet.size;
       const fill = document.getElementById('chart-fill');
       if (fill) fill.setAttribute('stroke-dasharray', `${progress} 100`);
-      document.getElementById('chart-text').textContent = progress + '%';
+      const txt = document.getElementById('chart-text');
+      if (txt) txt.textContent = progress + '%';
     }
 
     function shuffle(a) {
