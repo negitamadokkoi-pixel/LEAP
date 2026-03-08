@@ -254,7 +254,7 @@
 
     <div id='pane-list' class='hidden'>
       <div class='jump-box'>
-        <input class='jump-input' type='text' id='search' placeholder='検索 (スペースでOR検索) / 番号入力でGo' onkeydown='if(event.key==="Enter")jumpToId()'>
+        <input class='jump-input' type='text' id='search' placeholder='検索 (スペースでOR検索) / 番号入力でGo' onkeydown='if(event.key===`Enter`)jumpToId()'>
         <button class='btn-go' onclick='jumpToId()'>Go</button>
       </div>
       <div class='wlist' id='wlist'></div>
@@ -283,7 +283,6 @@
     let sessionOk = parseInt(localStorage.getItem('leap_session_ok') || '0');
     let sessionNg = parseInt(localStorage.getItem('leap_session_ng') || '0');
 
-    // 以前のシャッフル設定を復元
     shuffled = localStorage.getItem('leap_shuffled') === 'true';
 
     function speak(text) {
@@ -308,6 +307,8 @@
       localStorage.setItem('leap_range_from', document.getElementById('f-from').value);
       localStorage.setItem('leap_range_to', document.getElementById('f-to').value);
       localStorage.setItem('leap_shuffled', shuffled);
+      // シャッフル後の並び順（IDリスト）を保存
+      localStorage.setItem('leap_current_deck', JSON.stringify(deck.map(w => w.id)));
     }
 
     function changeStatus(id, event) {
@@ -329,12 +330,28 @@
         if (savedFrom) document.getElementById('f-from').value = savedFrom;
         if (savedTo) document.getElementById('f-to').value = savedTo;
 
-        const savedIdx = parseInt(localStorage.getItem('leap_current_idx') || '-1');
+        const savedIdx = parseInt(localStorage.getItem('leap_current_idx') || '0');
+        const savedDeckIds = JSON.parse(localStorage.getItem('leap_current_deck') || '[]');
         
-        // シャッフルボタンの見た目を復元
         updateShuffleBtnUI();
         
-        applyRange(savedIdx >= 0 ? savedIdx : 0);
+        // 保存されたデッキがあり、かつ範囲設定が一致していれば復元
+        if (savedDeckIds.length > 0) {
+          const restoredDeck = savedDeckIds.map(id => ALL.find(w => w.id === id)).filter(Boolean);
+          // 念のため範囲チェック
+          const f = parseInt(document.getElementById('f-from').value) || 1;
+          const t = parseInt(document.getElementById('f-to').value) || 2000;
+          if (restoredDeck.every(w => w.id >= f && w.id <= t) && restoredDeck.length > 0) {
+            deck = restoredDeck;
+            idx = savedIdx;
+            updateAccuracy();
+          } else {
+            applyRange(0);
+          }
+        } else {
+          applyRange(0);
+        }
+        updateCard();
         updateHdr();
       };
       reader.readAsText(event.target.files[0]);
@@ -353,20 +370,15 @@
         shuffle(deck);
       }
 
-      if (startIdx === 0) {
-        resetSession();
-        idx = 0;
-      } else {
-        idx = Math.min(startIdx, deck.length - 1);
-        updateAccuracy();
-      }
+      idx = startIdx;
+      if (startIdx === 0) resetSession();
+      updateAccuracy();
       updateCard();
     }
 
     function resetSession() {
       sessionOk = 0;
       sessionNg = 0;
-      localStorage.setItem('leap_current_idx', 0);
       updateAccuracy();
     }
 
@@ -394,9 +406,6 @@
       if(!isAnimating) {
         const inner = document.getElementById('card-inner');
         inner.classList.toggle('flip');
-        if (inner.classList.contains('flip') && deck[idx]) {
-          speak(deck[idx].w);
-        }
       } 
     }
 
@@ -418,7 +427,6 @@
       const inner = document.getElementById('card-inner');
       if (!inner.classList.contains('flip')) {
         inner.classList.add('flip');
-        speak(w.w);
       }
       
       setTimeout(() => {
@@ -448,13 +456,9 @@
     function toggleShuffle() {
       shuffled = !shuffled;
       updateShuffleBtnUI();
-      resetSession();
-      idx = 0;
       applyRange(0);
-      saveProgress();
     }
 
-    // 他のユーティリティ関数（shuffle, renderList等）は以前と同様
     function shuffle(a) {
       for (let i = a.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -485,8 +489,6 @@
       if (txt) txt.textContent = progress + '%';
     }
 
-    // ... 残りの関数（renderList, renderWeak, jumpToId, applyQuizRange, nextQuestion, printWeakList）
-    // (省略されているが以前のコードと同じものを保持)
     function applyQuizRange() { const f = parseInt(document.getElementById('q-from').value) || 1; const t = parseInt(document.getElementById('q-to').value) || 2000; qDeck = ALL.filter(w => w.id >= f && w.id <= t); startQuiz(); }
     function startQuiz() { shuffle(qDeck); qIdx = 0; nextQuestion(); }
     function nextQuestion() { if (qIdx >= qDeck.length) { alert('終了'); return; } const correct = qDeck[qIdx]; const choices = [correct, ...shuffle([...ALL.filter(w => w.id !== correct.id)]).slice(0, 3)]; shuffle(choices); document.getElementById('q-word').textContent = correct.w; speak(correct.w); const optContainer = document.getElementById('q-opts'); optContainer.innerHTML = ''; choices.forEach(c => { const div = document.createElement('div'); div.className = 'opt'; div.textContent = c.m; div.onclick = () => { if (div.classList.contains('correct') || div.classList.contains('wrong')) return; if (c.id === correct.id) { div.classList.add('correct'); okSet.add(correct.id); weakSet.delete(correct.id); saveStatus(); setTimeout(() => { qIdx++; nextQuestion(); }, 600); } else { div.classList.add('wrong'); weakSet.add(correct.id); okSet.delete(correct.id); saveStatus(); } }; optContainer.appendChild(div); }); }
