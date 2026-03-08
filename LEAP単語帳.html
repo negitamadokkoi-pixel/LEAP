@@ -75,128 +75,41 @@
       color: var(--accent);
     }
 
-    .logo em {
-      color: var(--text);
-      font-style: normal;
-    }
+    .logo em { color: var(--text); font-style: normal; }
 
-    .hstats {
-      display: flex;
-      gap: 20px;
-    }
+    .hstats { display: flex; gap: 20px; }
+    .hstat { text-align: center; font-size: .7rem; color: var(--muted); line-height: 1.2; }
+    .hstat strong { display: block; font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 1px; color: var(--text); }
 
-    .hstat {
-      text-align: center;
-      font-size: .7rem;
-      color: var(--muted);
-      line-height: 1.2;
-    }
+    .tabs { display: flex; background: var(--s1); border-bottom: 1px solid var(--border); }
+    .tab { flex: 1; padding: 14px; text-align: center; cursor: pointer; font-size: .85rem; color: var(--muted); border-bottom: 2px solid transparent; transition: all .2s; user-select: none; }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(91, 141, 238, .06); }
 
-    .hstat strong {
-      display: block;
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.5rem;
-      letter-spacing: 1px;
-      color: var(--text);
-    }
+    main { flex: 1; max-width: 740px; width: 100%; margin: 0 auto; padding: 24px 16px; }
 
-    .tabs {
-      display: flex;
-      background: var(--s1);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .tab {
-      flex: 1;
-      padding: 14px;
-      text-align: center;
-      cursor: pointer;
-      font-size: .85rem;
-      color: var(--muted);
-      border-bottom: 2px solid transparent;
-      transition: all .2s;
-      user-select: none;
-    }
-
-    .tab.active {
-      color: var(--accent);
-      border-bottom-color: var(--accent);
-      background: rgba(91, 141, 238, .06);
-    }
-
-    main {
-      flex: 1;
-      max-width: 740px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 24px 16px;
-    }
-
-    .toolbar {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-
-    .range-row {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 0.9rem;
-    }
-
-    .tbinput {
-      background: var(--s2);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 7px 11px;
-      border-radius: 8px;
-      font-size: .82rem;
-      font-family: inherit;
-      width: 80px;
-    }
-
-    .tbbtn {
-      background: var(--s2);
-      border: 1px solid var(--border);
-      color: var(--muted);
-      padding: 7px 14px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: .82rem;
-      font-family: inherit;
-      transition: all .2s;
-    }
-
-    .btn-go {
-      background: var(--accent);
-      color: #fff;
-      padding: 8px 18px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 700;
-      border: none;
-    }
+    .toolbar { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+    .range-row { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; }
+    .tbinput { background: var(--s2); border: 1px solid var(--border); color: var(--text); padding: 7px 11px; border-radius: 8px; font-size: .82rem; width: 65px; }
+    .tbbtn { background: var(--s2); border: 1px solid var(--border); color: var(--muted); padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: .82rem; transition: all .2s; }
+    .btn-go { background: var(--accent); color: #fff; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-weight: 700; border: none; font-size: 0.82rem; }
 
     .pgwrap { margin-bottom: 18px; }
     .pginfo { display: flex; justify-content: space-between; font-size: .75rem; color: var(--muted); margin-bottom: 5px; }
     .pgbar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
-    .pgfill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); border-radius: 3px; transition: width .4s; }
+    .pgfill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); transition: width .4s; }
 
     .card-scene { perspective: 1200px; cursor: pointer; margin-bottom: 20px; user-select: none; }
-    .card-inner { position: relative; width: 100%; min-height: 260px; transform-style: preserve-3d; transition: transform .55s cubic-bezier(.4, 0, .2, 1); }
+    .card-inner { position: relative; width: 100%; min-height: 280px; transform-style: preserve-3d; transition: transform .55s cubic-bezier(.4, 0, .2, 1); }
     .card-inner.flip { transform: rotateY(180deg); }
-    .face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: var(--r); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 36px; text-align: center; border: 1px solid var(--border); }
+    .face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: var(--r); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; text-align: center; border: 1px solid var(--border); }
     .face-front { background: var(--s1); }
     .face-back { background: var(--s2); border-color: var(--accent); transform: rotateY(180deg); }
-    .face-word { font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem; letter-spacing: 2px; color: var(--text); }
-    .face-eng { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--accent); }
-    .face-num { font-size: 0.8rem; color: var(--muted); margin-bottom: 10px; }
+    .face-word { font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem; letter-spacing: 2px; color: var(--text); margin: 10px 0; }
+    .face-eng { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--accent); margin-bottom: 15px; }
+    .face-num { font-size: 0.8rem; color: var(--muted); }
 
     .btnrow { display: flex; gap: 8px; margin-bottom: 10px; }
-    .btn { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--s2); color: var(--text); cursor: pointer; font-size: 0.9rem; font-weight: bold; transition: background 0.2s; }
+    .btn { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--s2); color: var(--text); cursor: pointer; font-size: 0.9rem; font-weight: bold; }
     .btn:active { transform: scale(0.98); }
     .btn-ok { border-color: var(--green); color: var(--green); }
     .btn-ng { border-color: var(--red); color: var(--red); }
@@ -204,39 +117,18 @@
     .qcard { background: var(--s1); border: 1px solid var(--border); border-radius: var(--r); padding: 40px 20px; text-align: center; margin-bottom: 20px; }
     .qword { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; color: var(--text); }
     .opts { display: flex; flex-direction: column; gap: 10px; }
-    .opt { background: var(--s2); border: 1px solid var(--border); padding: 15px; border-radius: 10px; cursor: pointer; text-align: left; font-size: 0.95rem; transition: 0.2s; }
-    .opt:hover { background: var(--s3); }
+    .opt { background: var(--s2); border: 1px solid var(--border); padding: 15px; border-radius: 10px; cursor: pointer; text-align: left; font-size: 0.95rem; }
     .opt.correct { background: var(--green) !important; color: #000; font-weight: bold; }
     .opt.wrong { background: var(--red) !important; color: #fff; }
 
     .wlist { display: flex; flex-direction: column; gap: 8px; }
-    .wrow {
-      display: flex;
-      gap: 12px;
-      padding: 12px 16px;
-      background: var(--s1);
-      border: 1px solid var(--border);
-      border-radius: 9px;
-      align-items: center;
-    }
+    .wrow { display: flex; gap: 12px; padding: 12px 16px; background: var(--s1); border: 1px solid var(--border); border-radius: 9px; align-items: center; }
     .wrow.weak { border-left: 4px solid var(--red); }
     .wrow.ok { border-left: 4px solid var(--green); }
     .wnum { font-size: .7rem; color: var(--muted); min-width: 30px; }
     .weng { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; color: var(--accent); min-width: 100px; }
     .wjpn { font-size: .85rem; color: var(--text); flex: 1; white-space: pre-wrap; }
-
-    .wbadge {
-      font-size: .65rem;
-      padding: 5px 8px;
-      border-radius: 6px;
-      background: var(--s3);
-      color: var(--muted);
-      border: 1px solid var(--border);
-      cursor: pointer;
-      min-width: 65px;
-      text-align: center;
-      font-weight: bold;
-    }
+    .wbadge { font-size: .65rem; padding: 5px 8px; border-radius: 6px; background: var(--s3); color: var(--muted); border: 1px solid var(--border); cursor: pointer; min-width: 65px; text-align: center; font-weight: bold; }
     .wbadge.ok { background: rgba(62, 207, 142, .15); color: var(--green); border-color: var(--green); }
     .wbadge.weak { background: rgba(240, 101, 112, .15); color: var(--red); border-color: var(--red); }
 
@@ -253,7 +145,6 @@
   <button class='scroll-btn' onclick='window.scrollTo({top:0,behavior:`smooth`})'>↑</button>
 
   <div id='data-loader' style='padding:20px;background:var(--s2);text-align:center;border-bottom:1px solid var(--border);'>
-    <p style='margin-bottom: 12px; font-size: 0.9rem;'>JSONファイルを選択してください</p>
     <label style='background:var(--accent);color:#fff;padding:10px 20px;border-radius:var(--r);cursor:pointer;font-weight:bold;display:inline-block;'>
       ファイルを選択
       <input type='file' accept='.json' onchange='loadData(event)' style='display:none;'>
@@ -262,13 +153,13 @@
 
   <header>
     <div class='logo'>LEAP <em>単語帳</em></div>
-    <div class='hstats' style='align-items:center;'>
-      <div class='hstat' style='position:relative;width:46px;height:46px;margin-right:4px;'>
+    <div class='hstats'>
+      <div class='hstat' style='position:relative;width:46px;height:46px;'>
         <svg viewBox='0 0 36 36' style='transform:rotate(-90deg);width:100%;height:100%;'>
           <circle cx='18' cy='18' r='16' fill='none' stroke='var(--border)' stroke-width='3.5'></circle>
-          <circle id='chart-fill' cx='18' cy='18' r='16' fill='none' stroke='var(--green)' stroke-width='3.5' stroke-dasharray='0 100' stroke-linecap='round' style='transition:stroke-dasharray 0.5s ease;'></circle>
+          <circle id='chart-fill' cx='18' cy='18' r='16' fill='none' stroke='var(--green)' stroke-width='3.5' stroke-dasharray='0 100' stroke-linecap='round'></circle>
         </svg>
-        <div id='chart-text' style='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:`Bebas Neue`;color:var(--text);'>0%</div>
+        <div id='chart-text' style='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:`Bebas Neue`;'>0%</div>
       </div>
       <div class='hstat'><strong id='h-range'>0</strong>範囲</div>
       <div class='hstat'><strong id='h-done'>0</strong>完了</div>
@@ -278,7 +169,7 @@
 
   <div class='tabs'>
     <div class='tab active' onclick='switchTab(`flash`)'>📇 フラッシュ</div>
-    <div class='tab' onclick='switchTab(`quiz`)'>🎯 4択クイズ</div>
+    <div class='tab' onclick='switchTab(`quiz`)'>🎯 クイズ</div>
     <div class='tab' onclick='switchTab(`list`)'>📋 一覧</div>
     <div class='tab' onclick='switchTab(`weak`)'>⚠️ 苦手</div>
   </div>
@@ -287,10 +178,10 @@
     <div id='pane-flash'>
       <div class='toolbar'>
         <div class='range-row'>
-          No.<input type='number' id='f-from' class='tbinput' value='1'>〜
-          <input type='number' id='f-to' class='tbinput' value='100'>
+          No.<input type='number' id='f-from' class='tbinput' value='1'>〜<input type='number' id='f-to' class='tbinput' value='100'>
           <button class='btn-go' onclick='applyRange()'>適用</button>
         </div>
+        <button class='tbbtn' onclick='applyWeakOnly()'>⚠️ 苦手のみ</button>
         <button class='tbbtn' id='shuf-btn' onclick='toggleShuffle()'>シャッフル</button>
       </div>
       <div class='pgwrap'>
@@ -302,7 +193,6 @@
           <div class='face face-front'>
             <div class='face-num' id='f-num'>—</div>
             <div class='face-word' id='f-word'>—</div>
-            <div style='font-size:0.8rem; color:var(--muted)'>タップで意味を確認</div>
           </div>
           <div class='face face-back'>
             <div class='face-num' id='b-num'>—</div>
@@ -325,19 +215,17 @@
     <div id='pane-quiz' class='hidden'>
       <div class='toolbar'>
         <div class='range-row'>
-          No.<input type='number' id='q-from' class='tbinput' value='1'>〜
-          <input type='number' id='q-to' class='tbinput' value='100'>
+          No.<input type='number' id='q-from' class='tbinput' value='1'>〜<input type='number' id='q-to' class='tbinput' value='100'>
           <button class='btn-go' onclick='applyQuizRange()'>適用</button>
         </div>
+        <button class='tbbtn' onclick='applyQuizWeakOnly()'>⚠️ 苦手のみ</button>
       </div>
-      <div class='qcard'>
-        <div class='qword' id='q-word'>—</div>
-      </div>
+      <div class='qcard'><div class='qword' id='q-word'>—</div></div>
       <div class='opts' id='q-opts'></div>
     </div>
 
     <div id='pane-list' class='hidden'>
-      <input class='tbinput' style='width:100%; margin-bottom:15px;' type='text' id='search' placeholder='単語や意味で検索' oninput='renderList()'>
+      <input class='tbinput' style='width:100%; margin-bottom:15px;' type='text' id='search' placeholder='検索' oninput='renderList()'>
       <div class='wlist' id='wlist'></div>
     </div>
 
@@ -348,8 +236,7 @@
   </main>
 
   <script>
-    let ALL = [];
-    let deck = [], idx = 0, shuffled = false;
+    let ALL = [], deck = [], idx = 0, shuffled = false;
     let weakSet = new Set(JSON.parse(localStorage.getItem('leap_weak') || '[]'));
     let okSet = new Set(JSON.parse(localStorage.getItem('leap_ok') || '[]'));
 
@@ -364,110 +251,102 @@
       if (okSet.has(id)) { okSet.delete(id); weakSet.add(id); }
       else if (weakSet.has(id)) { weakSet.delete(id); }
       else { okSet.add(id); }
-      saveStatus();
-      renderList();
-      renderWeak();
+      saveStatus(); renderList(); renderWeak();
     }
 
     function loadData(event) {
-      const file = event.target.files[0];
       const reader = new FileReader();
       reader.onload = (e) => {
         ALL = JSON.parse(e.target.result);
         document.getElementById('data-loader').style.display = 'none';
-        applyRange();
-        renderList();
+        applyRange(); updateHdr();
       };
-      reader.readAsText(file);
+      reader.readAsText(event.target.files[0]);
     }
 
     function applyRange() {
       const f = parseInt(document.getElementById('f-from').value) || 1;
-      const t = parseInt(document.getElementById('f-to').value) || 100;
+      const t = parseInt(document.getElementById('f-to').value) || 2000;
       deck = ALL.filter(w => w.id >= f && w.id <= t);
+      startDeck();
+    }
+
+    function applyWeakOnly() {
+      deck = ALL.filter(w => weakSet.has(w.id));
+      if(!deck.length) { alert('苦手単語が登録されていません'); return; }
+      startDeck();
+    }
+
+    function startDeck() {
       if (shuffled) shuffle(deck);
-      idx = 0;
-      updateCard();
-      updateHdr();
+      idx = 0; updateCard();
     }
 
     function updateCard() {
       if (!deck.length) return;
       document.getElementById('card-inner').classList.remove('flip');
       const w = deck[idx];
-      document.getElementById('f-num').textContent = 'No. ' + w.id;
-      document.getElementById('f-word').textContent = w.w;
-      document.getElementById('b-num').textContent = 'No. ' + w.id;
-      document.getElementById('b-eng').textContent = w.w;
+      document.getElementById('f-num').textContent = document.getElementById('b-num').textContent = 'No. ' + w.id;
+      document.getElementById('f-word').textContent = document.getElementById('b-eng').textContent = w.w;
       document.getElementById('b-meaning').textContent = w.m;
-      
       document.getElementById('f-prog').textContent = (idx + 1) + ' / ' + deck.length;
       document.getElementById('f-fill').style.width = ((idx+1)/deck.length*100) + '%';
       document.getElementById('f-pct').textContent = Math.round((idx+1)/deck.length*100) + '%';
     }
 
-    function flipCard() {
-      document.getElementById('card-inner').classList.toggle('flip');
-    }
+    function flipCard() { document.getElementById('card-inner').classList.toggle('flip'); }
 
     function vote(ok) {
       const w = deck[idx];
       if (ok) { okSet.add(w.id); weakSet.delete(w.id); }
       else { weakSet.add(w.id); okSet.delete(w.id); }
-      saveStatus();
-      go(1);
+      saveStatus(); go(1);
     }
 
-    function go(d) {
-      if(!deck.length) return;
-      idx = (idx + d + deck.length) % deck.length;
-      updateCard();
-    }
+    function go(d) { if(deck.length) { idx = (idx + d + deck.length) % deck.length; updateCard(); } }
 
     function toggleShuffle() {
       shuffled = !shuffled;
-      document.getElementById('shuf-btn').style.background = shuffled ? 'var(--accent)' : 'var(--s2)';
-      document.getElementById('shuf-btn').style.color = shuffled ? '#fff' : 'var(--muted)';
-      applyRange();
+      const btn = document.getElementById('shuf-btn');
+      btn.style.background = shuffled ? 'var(--accent)' : 'var(--s2)';
+      btn.style.color = shuffled ? '#fff' : 'var(--muted)';
+      startDeck();
     }
 
-    // クイズロジック
     let qDeck = [], qIdx = 0;
     function applyQuizRange() {
       const f = parseInt(document.getElementById('q-from').value) || 1;
-      const t = parseInt(document.getElementById('q-to').value) || 100;
+      const t = parseInt(document.getElementById('q-to').value) || 2000;
       qDeck = ALL.filter(w => w.id >= f && w.id <= t);
-      shuffle(qDeck);
-      qIdx = 0;
-      nextQuestion();
+      startQuiz();
     }
 
-    function nextQuestion() {
-      if (qIdx >= qDeck.length) { alert('範囲内の全問題が終了しました'); return; }
-      const correct = qDeck[qIdx];
-      const others = ALL.filter(w => w.id !== correct.id);
-      shuffle(others);
-      const choices = [correct, others[0], others[1], others[2]];
-      shuffle(choices);
+    function applyQuizWeakOnly() {
+      qDeck = ALL.filter(w => weakSet.has(w.id));
+      if(!qDeck.length) { alert('苦手単語がありません'); return; }
+      startQuiz();
+    }
 
+    function startQuiz() { shuffle(qDeck); qIdx = 0; nextQuestion(); }
+
+    function nextQuestion() {
+      if (qIdx >= qDeck.length) { alert('終了'); return; }
+      const correct = qDeck[qIdx];
+      const choices = [correct, ...shuffle([...ALL.filter(w => w.id !== correct.id)]).slice(0, 3)];
+      shuffle(choices);
       document.getElementById('q-word').textContent = correct.w;
       const optContainer = document.getElementById('q-opts');
       optContainer.innerHTML = '';
       choices.forEach(c => {
         const div = document.createElement('div');
-        div.className = 'opt';
-        div.textContent = c.m;
+        div.className = 'opt'; div.textContent = c.m;
         div.onclick = () => {
           if (div.classList.contains('correct') || div.classList.contains('wrong')) return;
           if (c.id === correct.id) {
-            div.classList.add('correct');
-            okSet.add(correct.id); weakSet.delete(correct.id);
-            saveStatus();
-            setTimeout(() => { qIdx++; nextQuestion(); }, 800);
+            div.classList.add('correct'); okSet.add(correct.id); weakSet.delete(correct.id);
+            saveStatus(); setTimeout(() => { qIdx++; nextQuestion(); }, 600);
           } else {
-            div.classList.add('wrong');
-            weakSet.add(correct.id); okSet.delete(correct.id);
-            saveStatus();
+            div.classList.add('wrong'); weakSet.add(correct.id); okSet.delete(correct.id); saveStatus();
           }
         };
         optContainer.appendChild(div);
@@ -476,23 +355,20 @@
 
     function renderList() {
       const q = (document.getElementById('search').value || '').toLowerCase();
-      const el = document.getElementById('wlist');
-      el.innerHTML = '';
+      const el = document.getElementById('wlist'); el.innerHTML = '';
       ALL.filter(w => w.w.toLowerCase().includes(q) || w.m.includes(q)).forEach(w => {
         const isW = weakSet.has(w.id), isO = okSet.has(w.id);
         const row = document.createElement('div');
         row.className = 'wrow' + (isW ? ' weak' : isO ? ' ok' : '');
         let label = '未着手', bCls = 'wbadge';
-        if (isW) { label = '苦手'; bCls += ' weak'; }
-        else if (isO) { label = '覚えた'; bCls += ' ok'; }
+        if (isW) { label = '苦手'; bCls += ' weak'; } else if (isO) { label = '覚えた'; bCls += ' ok'; }
         row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${w.m}</span><button class='${bCls}' onclick='changeStatus(${w.id}, event)'>${label}</button>`;
         el.appendChild(row);
       });
     }
 
     function renderWeak() {
-      const el = document.getElementById('weak-list');
-      el.innerHTML = '';
+      const el = document.getElementById('weak-list'); el.innerHTML = '';
       const list = ALL.filter(w => weakSet.has(w.id));
       document.getElementById('weak-empty').classList.toggle('hidden', list.length > 0);
       list.forEach(w => {
@@ -510,13 +386,11 @@
           if(tab.textContent.includes(x === 'flash' ? 'フラッシュ' : x === 'quiz' ? 'クイズ' : x === 'list' ? '一覧' : '苦手')) tab.classList.toggle('active', x === t);
         });
       });
-      if(t === 'weak') renderWeak();
-      if(t === 'list') renderList();
+      if(t === 'weak') renderWeak(); if(t === 'list') renderList();
     }
 
     function updateHdr() {
-      const total = ALL.length || 1;
-      const progress = Math.round((okSet.size / total) * 100);
+      const total = ALL.length || 1, progress = Math.round((okSet.size / total) * 100);
       document.getElementById('h-range').textContent = deck.length;
       document.getElementById('h-done').textContent = okSet.size + weakSet.size;
       document.getElementById('h-ok').textContent = okSet.size;
@@ -529,6 +403,7 @@
         const j = Math.floor(Math.random() * (i + 1));
         [a[i], a[j]] = [a[j], a[i]];
       }
+      return a;
     }
   </script>
 </body>
