@@ -330,10 +330,8 @@ main{flex:1;max-width:740px;width:100%;margin:0 auto;padding:24px 16px}
       ALL = JSON.parse(e.target.result);
       const count = ALL.length;
 
-      // ★追加：全ての入力欄の「最大値」を読み込んだデータ数に合わせる
       document.querySelectorAll('input[type="number"][max]').forEach(input => {
         input.max = count;
-        // 初期値が100の「〜まで」の欄を、自動的に全件数にする
         if(input.id.endsWith('-to') && input.value == "100") input.value = count;
       });
 
@@ -341,7 +339,7 @@ main{flex:1;max-width:740px;width:100%;margin:0 auto;padding:24px 16px}
       applyRange();
       applyQuizRange();
       renderList();
-      renderWeak(); // 苦手タブも初期化
+      renderWeak();
       showToast('読み込み完了！', 'ok');
     } catch(err) {
       alert('エラー：正しいJSONファイルを選択してください');
@@ -350,14 +348,15 @@ main{flex:1;max-width:740px;width:100%;margin:0 auto;padding:24px 16px}
   reader.readAsText(file);
 }
 
-//
 let ALL = [];
-  const maxWordCount = 1935;
+const maxWordCount = 1935;
+
 // ─── STATE ───
 let deck=[],idx=0,flipped=false,shuffled=false,dir='en',okCount=0,ngCount=0,voted=new Set();
 let qDeck=[],qIdx=0,qDir='en',qOk=0,qNg=0;
 let weakSet=new Set(JSON.parse(localStorage.getItem('leap_weak')||'[]'));
 let weakDeck=[],weakMode=false;
+let okSet=new Set(); // ★修正①：未定義だったokSetを追加
 
 function saveWeak(){try{localStorage.setItem('leap_weak',JSON.stringify([...weakSet]))}catch(e){}}
 
@@ -411,16 +410,11 @@ function updateCard(){
   if(!deck.length)return;
   const cardInner = document.getElementById('card-inner');
 
-  // 1. まずアニメーションを完全に切り、強制的に表面(flipped=false)にする
   cardInner.style.transition = 'none'; 
   flipped = false;
   cardInner.classList.remove('flip');
-
-  // ★ここがコツ：ブラウザに「一旦表面に戻ったこと」を強制的に認識させるための呪文
-  // これを一行入れるだけで、描き換えの順番待ちが整理されます
   void cardInner.offsetWidth; 
 
-  // 2. 表面に戻ったことが確定してから、中身を書き換える
   const w=deck[idx];
   document.getElementById('f-num').textContent='No. '+w.id;
   document.getElementById('b-num').textContent='No. '+w.id;
@@ -439,18 +433,15 @@ function updateCard(){
     document.getElementById('b-meaning').textContent=w.m;
   }
 
-  // 3. 進捗表示
   const done=voted.size, total=deck.length, pct=total?Math.round(done/total*100):0;
   document.getElementById('f-prog').textContent=(idx+1)+' / '+total;
   document.getElementById('f-pct').textContent=pct+'%';
   document.getElementById('f-fill').style.width=pct+'%';
 
-  // 4. 音声読み上げ
   if(dir==='en' && !flipped) {
     speech(w.w);
   }
 
-  // 5. 最後にアニメーションを復活させる（少し長めの20msに設定）
   setTimeout(() => {
     cardInner.style.transition = 'transform .55s cubic-bezier(.4,0,.2,1)';
   }, 20);
@@ -459,17 +450,28 @@ function updateCard(){
 function vote(ok){
   if(!deck.length)return;
   if(!flipped)flipCard();
-  const w=deck[idx];
-  if(!voted.has(w.id)){
-    voted.add(w.id);
-    if(ok){okCount++;weakSet.delete(w.id)}
-    else{ngCount++;weakSet.add(w.id)}
-    saveWeak();
+  const w = deck[idx];
+
+  // ★修正②：既に投票済みのカードは二重カウントしない
+  if(voted.has(idx))return;
+  voted.add(idx); 
+  
+  if(ok){
+    okCount++;
+    okSet.add(w.id);
+    weakSet.delete(w.id);
+  } else {
+    ngCount++;
+    weakSet.add(w.id);
   }
+  
+  saveWeak();
   updateHdr();
-  showToast(ok?'✓ 正解':'✗ もう一度',ok?'ok':'ng');
-  setTimeout(()=>go(1),1200);
+  
+  showToast(ok ? '✓ 正解' : '✗ もう一度', ok ? 'ok' : 'ng');
+  setTimeout(() => go(1), 1200);
 }
+
 
 function go(d){
   if(!deck.length)return;
@@ -484,11 +486,9 @@ function showDone(){
   document.getElementById('d-ng').childNodes[0].textContent=ngCount;
   document.getElementById('d-pct').childNodes[0].textContent=pct+'%';
 
-  // --- 間違えた単語リストの表示処理 ---
   const listEl = document.getElementById('f-wrong-list');
-  listEl.innerHTML = ''; // 一旦クリア
+  listEl.innerHTML = '';
   
-  // 今回のデッキの中で、苦手セット（weakSet）に入っているものだけを取り出す
   const wrongs = deck.filter(w => weakSet.has(w.id));
   
   if (wrongs.length > 0) {
@@ -507,7 +507,6 @@ function showDone(){
   } else {
     listEl.style.display = 'none';
   }
-  // ---------------------------------
 
   document.getElementById('f-done').style.display='block';
   updateHdr();
@@ -520,33 +519,24 @@ function restartFlash(){
 
 function updateHdr(){
   const total = deck.length, done = voted.size, ok = okCount, ng = ngCount;
-  // 全体に対する割合を計算
   const okPct = total ? Math.round(ok / total * 100) : 0;
   const ngPct = total ? Math.round(ng / total * 100) : 0;
-  // テキスト用の正答率（解いた分の中での正解率）
   const scorePct = done ? Math.round(ok / done * 100) : 0;
   
-  // 数値の更新
   document.getElementById('h-range').textContent = total;
   document.getElementById('h-done').textContent = done;
   document.getElementById('h-ok').textContent = ok;
 
-  // グラフの更新
   const circleOk = document.getElementById('chart-fill');
   const circleNg = document.getElementById('chart-ng');
   const text = document.getElementById('chart-text');
   
   if (circleOk && circleNg && text) {
-    // 赤いバー（不正解）をまず描画
     circleNg.style.strokeDasharray = `${ngPct + okPct} 100`; 
-    // その上に緑のバー（正解）を重ねる
     circleOk.style.strokeDasharray = `${okPct} 100`;
-    
     text.textContent = scorePct + '%';
   }
 }
-
-
 
 function studyWeak() {
   const ws = [...weakSet];
@@ -555,7 +545,6 @@ function studyWeak() {
 
   if (!ws.length) return;
 
-  // 苦手セットの中から、指定範囲内のものだけを抽出
   deck = ALL.filter(w => ws.includes(w.id) && w.id >= from && w.id <= to);
 
   if (!deck.length) {
@@ -612,7 +601,6 @@ function renderQuestion(){
     document.getElementById('q-jp').classList.add('hidden');
   }
 
-  // 4 choices
   const pool=ALL.filter(x=>x.id!==w.id);
   const wrongs=shuffle(pool).slice(0,3);
   const choices=shuffle([w,...wrongs]);
@@ -657,15 +645,11 @@ function restartQuiz(){document.getElementById('q-done').style.display='none';ap
 // ─── LIST ───
 function renderList() {
   const q = (document.getElementById('search').value || '').toLowerCase().trim();
-  
-  // スペース（全角・半角）で分割
   const keywords = q.split(/[\s　]+/).filter(k => k.length > 0);
   
-  // いずれかのキーワードが含まれているかチェックする（OR検索）
   const src = keywords.length > 0 
     ? ALL.filter(w => {
         const targetText = (w.w + w.m).toLowerCase();
-        // one of the keywords matches
         return keywords.some(kw => targetText.includes(kw));
       })
     : ALL;
@@ -678,7 +662,6 @@ function renderList() {
     row.className = 'wrow' + (weakSet.has(w.id) ? ' weak' : '');
     row.style.cursor = 'pointer'; 
     row.onclick = () => speech(w.w); 
-
     row.innerHTML = `<span class="wnum">${w.id}</span><span class="weng">${w.w}</span><span class="wjpn">${w.m}</span>${weakSet.has(w.id) ? '<span class="wbadge">苦手</span>' : ''}`;
     el.appendChild(row);
   });
@@ -687,11 +670,9 @@ function renderList() {
 // ─── WEAK ───
 function renderWeak() {
   const ws = [...weakSet];
-  // 範囲を取得
   const from = parseInt(document.getElementById('w-from').value) || 1;
   const to = parseInt(document.getElementById('w-to').value) || 1935;
 
-  // 苦手かつ範囲内の単語を抽出
   const filteredWeak = ALL.filter(w => ws.includes(w.id) && w.id >= from && w.id <= to);
 
   document.getElementById('weak-empty').classList.toggle('hidden', ws.length > 0);
@@ -736,16 +717,15 @@ applyRange();
 applyQuizRange();
 renderList();
 
-  function speech(text) {
-    window.speechSynthesis.cancel();
-  // ブラウザの読み上げ機能を呼び出す
+function speech(text) {
+  window.speechSynthesis.cancel();
   const uttr = new SpeechSynthesisUtterance(text);
-  uttr.lang = 'en-US'; // 英語（アメリカ）に設定
-  uttr.rate = 0.9;     // 少しゆっくりめに再生（1.0が標準）
+  uttr.lang = 'en-US';
+  uttr.rate = 0.9;
   window.speechSynthesis.speak(uttr);
 }
 
-  function scrollToId(id) {
+function scrollToId(id) {
   const rows = document.querySelectorAll('.wrow');
   for (let row of rows) {
     const num = parseInt(row.querySelector('.wnum').textContent);
@@ -756,29 +736,23 @@ renderList();
   }
 }
 
-
-  function jumpToNo() {
+function jumpToNo() {
   const val = parseInt(document.getElementById('jump-no').value);
   if (!val) return;
-  
-  // 入力された番号へジャンプ
   scrollToId(val);
-  
-  // ジャンプしたあとに、その単語をパッと光らせる（おまけ演出）
   setTimeout(() => {
     const rows = document.querySelectorAll('.wrow');
     for (let row of rows) {
       const num = parseInt(row.querySelector('.wnum').textContent);
       if (num === val) {
         row.style.transition = 'background 0.3s';
-        row.style.background = 'var(--s3)'; // 一時的に色を変える
+        row.style.background = 'var(--s3)';
         setTimeout(() => row.style.background = 'var(--s1)', 1000);
         break;
       }
     }
   }, 500);
 }
-
 </script>
 </body>
 </html>
