@@ -119,7 +119,11 @@ main{flex:1;max-width:740px;width:100%;margin:0 auto;padding:24px 16px}
 .weng{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;letter-spacing:1px;color:var(--accent);min-width:140px}
 .wjpn{font-size:.83rem;color:var(--text);line-height:1.6}
 .wbadge{font-size:.65rem;padding:2px 6px;border-radius:4px;background:rgba(240,101,112,.2);color:var(--red);white-space:nowrap;margin-left:auto;align-self:center}
-
+.wbadge.ok {
+  background: rgba(62, 207, 142, 0.2);
+  color: var(--green);
+}
+  
 /* ── COMPLETE ── */
 .done{display:none;text-align:center;padding:60px 20px}
 .done h2{font-family:'Bebas Neue',sans-serif;font-size:3.5rem;letter-spacing:5px;color:var(--green);margin-bottom:8px}
@@ -658,14 +662,26 @@ function renderList() {
   el.innerHTML = '';
   
   src.forEach(w => {
+    const isWeak = weakSet.has(w.id);
+    const isOk = okSet.has(w.id); // ここで覚えたかを判定
+
     const row = document.createElement('div');
-    row.className = 'wrow' + (weakSet.has(w.id) ? ' weak' : '');
+    row.className = 'wrow' + (isWeak ? ' weak' : '');
     row.style.cursor = 'pointer'; 
     row.onclick = () => speech(w.w); 
-    row.innerHTML = `<span class="wnum">${w.id}</span><span class="weng">${w.w}</span><span class="wjpn">${w.m}</span>${weakSet.has(w.id) ? '<span class="wbadge">苦手</span>' : ''}`;
+
+    let badgeHtml = '';
+    if (isWeak) {
+      badgeHtml = '<span class="wbadge">苦手</span>';
+    } else if (isOk) {
+      badgeHtml = '<span class="wbadge ok">覚えた</span>'; // 緑バッジを表示
+    }
+
+    row.innerHTML = `<span class="wnum">${w.id}</span><span class="weng">${w.w}</span><span class="wjpn">${w.m}</span>${badgeHtml}`;
     el.appendChild(row);
   });
 }
+
 
 // ─── WEAK ───
 function renderWeak() {
