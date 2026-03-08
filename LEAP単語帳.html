@@ -283,6 +283,9 @@
     let sessionOk = parseInt(localStorage.getItem('leap_session_ok') || '0');
     let sessionNg = parseInt(localStorage.getItem('leap_session_ng') || '0');
 
+    // 以前のシャッフル設定を復元
+    shuffled = localStorage.getItem('leap_shuffled') === 'true';
+
     function speak(text) {
       if (!text) return;
       speechSynthesis.cancel();
@@ -304,6 +307,7 @@
       localStorage.setItem('leap_session_ng', sessionNg);
       localStorage.setItem('leap_range_from', document.getElementById('f-from').value);
       localStorage.setItem('leap_range_to', document.getElementById('f-to').value);
+      localStorage.setItem('leap_shuffled', shuffled);
     }
 
     function changeStatus(id, event) {
@@ -320,13 +324,16 @@
         ALL = JSON.parse(e.target.result);
         document.getElementById('data-loader').style.display = 'none';
         
-        // 保存された範囲を復元
         const savedFrom = localStorage.getItem('leap_range_from');
         const savedTo = localStorage.getItem('leap_range_to');
         if (savedFrom) document.getElementById('f-from').value = savedFrom;
         if (savedTo) document.getElementById('f-to').value = savedTo;
 
         const savedIdx = parseInt(localStorage.getItem('leap_current_idx') || '-1');
+        
+        // シャッフルボタンの見た目を復元
+        updateShuffleBtnUI();
+        
         applyRange(savedIdx >= 0 ? savedIdx : 0);
         updateHdr();
       };
@@ -334,7 +341,7 @@
     }
 
     function applyRangeByButton() {
-      applyRange(0); // ボタン押下時は最初から
+      applyRange(0);
     }
 
     function applyRange(startIdx = 0) {
@@ -342,6 +349,10 @@
       const t = parseInt(document.getElementById('f-to').value) || 2000;
       deck = ALL.filter(w => w.id >= f && w.id <= t);
       
+      if (shuffled) {
+        shuffle(deck);
+      }
+
       if (startIdx === 0) {
         resetSession();
         idx = 0;
@@ -349,20 +360,7 @@
         idx = Math.min(startIdx, deck.length - 1);
         updateAccuracy();
       }
-      startDeck();
-    }
-
-    function applyWeakOnlyFromWeakTab() {
-      const f = parseInt(document.getElementById('w-from').value) || 1;
-      const t = parseInt(document.getElementById('w-to').value) || 2000;
-      deck = ALL.filter(w => w.id >= f && w.id <= t && weakSet.has(w.id));
-      if(!deck.length) { alert('範囲内に苦手単語はありません'); return; }
-      document.getElementById('f-from').value = f;
-      document.getElementById('f-to').value = t;
-      resetSession();
-      idx = 0;
-      switchTab('flash');
-      startDeck();
+      updateCard();
     }
 
     function resetSession() {
@@ -377,11 +375,6 @@
       const rate = total === 0 ? 0 : Math.round((sessionOk / total) * 100);
       document.getElementById('f-accuracy').textContent = rate;
       saveProgress();
-    }
-
-    function startDeck() {
-      if (shuffled) shuffle(deck);
-      updateCard();
     }
 
     function updateCard() {
@@ -446,120 +439,28 @@
       } 
     }
 
-    function toggleShuffle() {
-      shuffled = !shuffled;
+    function updateShuffleBtnUI() {
       const btn = document.getElementById('shuf-btn');
       btn.style.background = shuffled ? 'var(--accent)' : 'var(--s2)';
       btn.style.color = shuffled ? '#fff' : 'var(--muted)';
+    }
+
+    function toggleShuffle() {
+      shuffled = !shuffled;
+      updateShuffleBtnUI();
       resetSession();
       idx = 0;
-      startDeck();
+      applyRange(0);
+      saveProgress();
     }
 
-    function printWeakList() {
-      const list = ALL.filter(w => weakSet.has(w.id));
-      if(!list.length) { alert('苦手単語がありません'); return; }
-      const printContainer = document.getElementById('print-container');
-      let html = `<div class='print-title'>LEAP 苦手単語チェックシート (${new Date().toLocaleDateString()})</div>`;
-      html += `<div class='print-columns'>`;
-      list.forEach(w => {
-        html += `<div class='print-item'><div class='print-check'></div><div class='print-no'>${w.id}</div><div class='print-eng'>${w.w}</div><div class='print-line'></div></div>`;
-      });
-      html += `</div>`;
-      printContainer.innerHTML = html;
-      window.print();
-      setTimeout(() => { printContainer.innerHTML = ''; }, 800);
-    }
-
-    let qDeck = [], qIdx = 0;
-    function applyQuizRange() {
-      const f = parseInt(document.getElementById('q-from').value) || 1;
-      const t = parseInt(document.getElementById('q-to').value) || 2000;
-      qDeck = ALL.filter(w => w.id >= f && w.id <= t);
-      startQuiz();
-    }
-
-    function startQuiz() { shuffle(qDeck); qIdx = 0; nextQuestion(); }
-
-    function nextQuestion() {
-      if (qIdx >= qDeck.length) { alert('終了'); return; }
-      const correct = qDeck[qIdx];
-      const choices = [correct, ...shuffle([...ALL.filter(w => w.id !== correct.id)]).slice(0, 3)];
-      shuffle(choices);
-      document.getElementById('q-word').textContent = correct.w;
-      speak(correct.w);
-      const optContainer = document.getElementById('q-opts');
-      optContainer.innerHTML = '';
-      choices.forEach(c => {
-        const div = document.createElement('div');
-        div.className = 'opt'; div.textContent = c.m;
-        div.onclick = () => {
-          if (div.classList.contains('correct') || div.classList.contains('wrong')) return;
-          if (c.id === correct.id) {
-            div.classList.add('correct'); okSet.add(correct.id); weakSet.delete(correct.id);
-            saveStatus(); setTimeout(() => { qIdx++; nextQuestion(); }, 600);
-          } else {
-            div.classList.add('wrong'); weakSet.add(correct.id); okSet.delete(correct.id); saveStatus();
-          }
-        };
-        optContainer.appendChild(div);
-      });
-    }
-
-    function renderList() {
-      const searchInput = document.getElementById('search').value.trim();
-      const el = document.getElementById('wlist'); el.innerHTML = '';
-      const keywords = searchInput.toLowerCase().split(/[\s　]+/).filter(k => k.length > 0);
-      
-      const filtered = ALL.filter(w => {
-        if (keywords.length === 0) return true;
-        const textKeywords = keywords.filter(k => isNaN(k));
-        if (textKeywords.length === 0) return true; 
-        return textKeywords.some(q => w.w.toLowerCase().includes(q) || w.m.includes(q));
-      });
-
-      filtered.forEach(w => {
-        const isW = weakSet.has(w.id), isO = okSet.has(w.id);
-        const row = document.createElement('div');
-        row.className = 'wrow' + (isW ? ' weak' : isO ? ' ok' : '');
-        row.id = 'word-row-' + w.id;
-        let label = '未着手', bCls = 'wbadge';
-        if (isW) { label = '苦手'; bCls += ' weak'; } else if (isO) { label = '覚えた'; bCls += ' ok'; }
-        
-        row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${w.m}</span><button class='${bCls}' onclick='changeStatus(${w.id}, event)'>${label}</button>`;
-        row.onclick = () => speak(w.w);
-        el.appendChild(row);
-      });
-    }
-
-    function jumpToId() {
-      const input = document.getElementById('search').value.trim();
-      const keywords = input.split(/[\s　]+/);
-      const jumpId = keywords.find(k => !isNaN(k) && k !== '');
-      if (jumpId) {
-        const target = document.getElementById('word-row-' + jumpId);
-        if (target) {
-          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          target.classList.remove('jump-target');
-          void target.offsetWidth; 
-          target.classList.add('jump-target');
-        } else {
-          alert('No.' + jumpId + ' は現在のリストに存在しません');
-        }
+    // 他のユーティリティ関数（shuffle, renderList等）は以前と同様
+    function shuffle(a) {
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
       }
-    }
-
-    function renderWeak() {
-      const el = document.getElementById('weak-list'); el.innerHTML = '';
-      const list = ALL.filter(w => weakSet.has(w.id));
-      document.getElementById('weak-empty').classList.toggle('hidden', list.length > 0);
-      list.forEach(w => {
-        const row = document.createElement('div');
-        row.className = 'wrow weak';
-        row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${w.m}</span><button class='wbadge weak' onclick='changeStatus(${w.id}, event)'>苦手</button>`;
-        row.onclick = () => speak(w.w);
-        el.appendChild(row);
-      });
+      return a;
     }
 
     function switchTab(t) {
@@ -584,13 +485,16 @@
       if (txt) txt.textContent = progress + '%';
     }
 
-    function shuffle(a) {
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      return a;
-    }
+    // ... 残りの関数（renderList, renderWeak, jumpToId, applyQuizRange, nextQuestion, printWeakList）
+    // (省略されているが以前のコードと同じものを保持)
+    function applyQuizRange() { const f = parseInt(document.getElementById('q-from').value) || 1; const t = parseInt(document.getElementById('q-to').value) || 2000; qDeck = ALL.filter(w => w.id >= f && w.id <= t); startQuiz(); }
+    function startQuiz() { shuffle(qDeck); qIdx = 0; nextQuestion(); }
+    function nextQuestion() { if (qIdx >= qDeck.length) { alert('終了'); return; } const correct = qDeck[qIdx]; const choices = [correct, ...shuffle([...ALL.filter(w => w.id !== correct.id)]).slice(0, 3)]; shuffle(choices); document.getElementById('q-word').textContent = correct.w; speak(correct.w); const optContainer = document.getElementById('q-opts'); optContainer.innerHTML = ''; choices.forEach(c => { const div = document.createElement('div'); div.className = 'opt'; div.textContent = c.m; div.onclick = () => { if (div.classList.contains('correct') || div.classList.contains('wrong')) return; if (c.id === correct.id) { div.classList.add('correct'); okSet.add(correct.id); weakSet.delete(correct.id); saveStatus(); setTimeout(() => { qIdx++; nextQuestion(); }, 600); } else { div.classList.add('wrong'); weakSet.add(correct.id); okSet.delete(correct.id); saveStatus(); } }; optContainer.appendChild(div); }); }
+    function renderList() { const searchInput = document.getElementById('search').value.trim(); const el = document.getElementById('wlist'); el.innerHTML = ''; const keywords = searchInput.toLowerCase().split(/[\s　]+/).filter(k => k.length > 0); const filtered = ALL.filter(w => { if (keywords.length === 0) return true; const textKeywords = keywords.filter(k => isNaN(k)); if (textKeywords.length === 0) return true; return textKeywords.some(q => w.w.toLowerCase().includes(q) || w.m.includes(q)); }); filtered.forEach(w => { const isW = weakSet.has(w.id), isO = okSet.has(w.id); const row = document.createElement('div'); row.className = 'wrow' + (isW ? ' weak' : isO ? ' ok' : ''); row.id = 'word-row-' + w.id; let label = '未着手', bCls = 'wbadge'; if (isW) { label = '苦手'; bCls += ' weak'; } else if (isO) { label = '覚えた'; bCls += ' ok'; } row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${w.m}</span><button class='${bCls}' onclick='changeStatus(${w.id}, event)'>${label}</button>`; row.onclick = () => speak(w.w); el.appendChild(row); }); }
+    function jumpToId() { const input = document.getElementById('search').value.trim(); const keywords = input.split(/[\s　]+/); const jumpId = keywords.find(k => !isNaN(k) && k !== ''); if (jumpId) { const target = document.getElementById('word-row-' + jumpId); if (target) { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); target.classList.remove('jump-target'); void target.offsetWidth; target.classList.add('jump-target'); } else { alert('No.' + jumpId + ' は現在のリストに存在しません'); } } }
+    function renderWeak() { const el = document.getElementById('weak-list'); el.innerHTML = ''; const list = ALL.filter(w => weakSet.has(w.id)); document.getElementById('weak-empty').classList.toggle('hidden', list.length > 0); list.forEach(w => { const row = document.createElement('div'); row.className = 'wrow weak'; row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${w.m}</span><button class='wbadge weak' onclick='changeStatus(${w.id}, event)'>苦手</button>`; row.onclick = () => speak(w.w); el.appendChild(row); }); }
+    function applyWeakOnlyFromWeakTab() { const f = parseInt(document.getElementById('w-from').value) || 1; const t = parseInt(document.getElementById('w-to').value) || 2000; deck = ALL.filter(w => w.id >= f && w.id <= t && weakSet.has(w.id)); if(!deck.length) { alert('範囲内に苦手単語はありません'); return; } document.getElementById('f-from').value = f; document.getElementById('f-to').value = t; resetSession(); idx = 0; switchTab('flash'); updateCard(); }
+    function printWeakList() { const list = ALL.filter(w => weakSet.has(w.id)); if(!list.length) { alert('苦手単語がありません'); return; } const printContainer = document.getElementById('print-container'); let html = `<div class='print-title'>LEAP 苦手単語チェックシート (${new Date().toLocaleDateString()})</div>`; html += `<div class='print-columns'>`; list.forEach(w => { html += `<div class='print-item'><div class='print-check'></div><div class='print-no'>${w.id}</div><div class='print-eng'>${w.w}</div><div class='print-line'></div></div>`; }); html += `</div>`; printContainer.innerHTML = html; window.print(); setTimeout(() => { printContainer.innerHTML = ''; }, 800); }
 
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('search').addEventListener('input', renderList);
