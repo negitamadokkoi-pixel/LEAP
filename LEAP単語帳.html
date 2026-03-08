@@ -239,7 +239,7 @@
     </div>
 
     <div id='pane-list' class='hidden'>
-      <input class='tbinput' style='width:100%; margin-bottom:15px;' type='text' id='search' placeholder='検索' oninput='renderList()'>
+      <input class='tbinput' style='width:100%; margin-bottom:15px;' type='text' id='search' placeholder='検索 (スペース区切りでOR検索, 番号検索可)' oninput='renderList()'>
       <div class='wlist' id='wlist'></div>
     </div>
 
@@ -432,14 +432,27 @@
     }
 
     function renderList() {
-      const q = (document.getElementById('search').value || '').toLowerCase();
+      const searchInput = document.getElementById('search').value.trim();
       const el = document.getElementById('wlist'); el.innerHTML = '';
-      ALL.filter(w => w.w.toLowerCase().includes(q) || w.m.includes(q)).forEach(w => {
+      
+      const keywords = searchInput.toLowerCase().split(/[\s　]+/).filter(k => k.length > 0);
+      
+      const filtered = ALL.filter(w => {
+        if (keywords.length === 0) return true;
+        return keywords.some(q => {
+          return w.w.toLowerCase().includes(q) || 
+                 w.m.includes(q) || 
+                 w.id.toString() === q;
+        });
+      });
+
+      filtered.forEach(w => {
         const isW = weakSet.has(w.id), isO = okSet.has(w.id);
         const row = document.createElement('div');
         row.className = 'wrow' + (isW ? ' weak' : isO ? ' ok' : '');
         let label = '未着手', bCls = 'wbadge';
         if (isW) { label = '苦手'; bCls += ' weak'; } else if (isO) { label = '覚えた'; bCls += ' ok'; }
+        
         row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${w.m}</span><button class='${bCls}' onclick='changeStatus(${w.id}, event)'>${label}</button>`;
         row.onclick = () => speak(w.w);
         el.appendChild(row);
