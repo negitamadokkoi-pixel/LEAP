@@ -139,19 +139,19 @@
 
     @media print {
       body * { display: none !important; }
-      #print-container { display: block !important; position: absolute; left: 0; top: 0; width: 100%; color: #000; background: #fff; padding: 0; margin: 0; }
+      #print-container { display: block !important; position: absolute; left: 0; top: 0; width: 100%; color: #000; background: #fff; }
       #print-container * { display: block !important; visibility: visible; }
       
-      .print-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; text-align: center; border-bottom: 1px solid #000; padding-bottom: 5px; color: #000; }
+      .print-title { font-size: 14px; font-weight: bold; margin-bottom: 10px; text-align: center; border-bottom: 1px solid #000; padding-bottom: 4px; }
       
-      .print-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-      .print-td { vertical-align: top; width: 33.33%; padding: 0 5px; }
+      /* 紙面を3つのカラムに分割 */
+      .print-columns { column-count: 3; column-gap: 20px; column-rule: 0.5px solid #eee; }
       
-      .print-item { display: flex; border-bottom: 0.5px solid #ccc; padding: 4px 0; align-items: center; page-break-inside: avoid; }
+      .print-item { display: flex; border-bottom: 0.5px solid #ddd; padding: 4px 0; align-items: center; page-break-inside: avoid; }
       .print-check { width: 10px; height: 10px; border: 0.5px solid #000; margin-right: 5px; flex-shrink: 0; }
-      .print-no { font-size: 8px; color: #444; width: 25px; flex-shrink: 0; }
-      .print-eng { font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: bold; width: 75px; white-space: nowrap; overflow: hidden; }
-      .print-line { flex: 1; border-bottom: 0.5px dotted #888; height: 12px; margin-left: 3px; }
+      .print-no { font-size: 8px; color: #666; width: 22px; flex-shrink: 0; }
+      .print-eng { font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: bold; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .print-line { width: 40px; border-bottom: 0.5px dotted #aaa; height: 10px; margin-left: 5px; }
       
       @page { size: A4; margin: 10mm; }
     }
@@ -370,36 +370,23 @@
       
       const printContainer = document.getElementById('print-container');
       let html = `<div class='print-title'>LEAP 苦手単語チェックシート (${new Date().toLocaleDateString()})</div>`;
-      
-      // 単語を3列に分配
-      const colCount = 3;
-      const perCol = Math.ceil(list.length / colCount);
-      const cols = [[], [], []];
-      for(let i=0; i<list.length; i++) {
-        cols[Math.floor(i / perCol)].push(list[i]);
-      }
-
-      html += `<table class='print-table'><tr>`;
-      for(let i=0; i<colCount; i++) {
-        html += `<td class='print-td'>`;
-        cols[i].forEach(w => {
-          html += `
-            <div class='print-item'>
-              <div class='print-check'></div>
-              <div class='print-no'>${w.id}</div>
-              <div class='print-eng'>${w.w}</div>
-              <div class='print-line'></div>
-            </div>`;
-        });
-        html += `</td>`;
-      }
-      html += `</tr></table>`;
+      html += `<div class='print-columns'>`;
+      list.forEach(w => {
+        html += `
+          <div class='print-item'>
+            <div class='print-check'></div>
+            <div class='print-no'>${w.id}</div>
+            <div class='print-eng'>${w.w}</div>
+            <div class='print-line'></div>
+          </div>`;
+      });
+      html += `</div>`;
       
       printContainer.innerHTML = html;
       window.print();
       
-      // 印刷後に内容を消去
-      setTimeout(() => { printContainer.innerHTML = ''; }, 1000);
+      // 印刷後は確実にクリア
+      setTimeout(() => { printContainer.innerHTML = ''; }, 800);
     }
 
     let qDeck = [], qIdx = 0;
