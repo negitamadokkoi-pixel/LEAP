@@ -152,12 +152,21 @@ main{flex:1;max-width:740px;width:100%;margin:0 auto;padding:24px 16px}
 
 <header>
   <div class="logo">LEAP <em>単語帳</em></div>
-  <div class="hstats">
-    <div class="hstat"><strong id="h-range">100</strong>範囲</div>
-    <div class="hstat"><strong id="h-done">0</strong>完了</div>
-    <div class="hstat"><strong id="h-ok">0</strong>正解</div>
-    <div class="hstat"><strong id="h-pct">—</strong>正答率</div>
+  <div class="hstats" style="align-items: center;">
+  <div class="hstat" style="position:relative; width:46px; height:46px; margin-right:4px;">
+    <svg viewBox="0 0 36 36" style="transform: rotate(-90deg); width: 100%; height: 100%;">
+      <circle cx="18" cy="18" r="16" fill="none" stroke="var(--border)" stroke-width="3.5"></circle>
+      <circle id="chart-fill" cx="18" cy="18" r="16" fill="none" stroke="var(--green)" stroke-width="3.5" stroke-dasharray="0 100" stroke-linecap="round" style="transition: stroke-dasharray 0.5s ease;"></circle>
+    </svg>
+    <div id="chart-text" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; font-family:'Bebas Neue'; color:var(--text);">0%</div>
   </div>
+
+  <div class="hstat"><strong id="h-range">100</strong>範囲</div>
+  <div class="hstat"><strong id="h-done">0</strong>完了</div>
+  <div class="hstat"><strong id="h-ok">0</strong>正解</div>
+  <div class="hstat" style="display:none;"><strong id="h-pct">—</strong>正答率</div>
+</div>
+
 </header>
 
 <div class="tabs">
@@ -287,16 +296,26 @@ main{flex:1;max-width:740px;width:100%;margin:0 auto;padding:24px 16px}
 
 <!-- ═══ WEAK ═══ -->
 <div id="pane-weak" class="hidden">
+  <div class="toolbar hidden" id="weak-toolbar" style="margin-bottom:20px;">
+    <div class="range-row">
+      No.<input type="number" id="w-from" class="tbinput" value="1" min="1" max="1935" oninput="renderWeak()">〜
+      <input type="number" id="w-to" class="tbinput" value="100" min="1" max="1935" oninput="renderWeak()">
+    </div>
+  </div>
+
   <div id="weak-empty" style="text-align:center;padding:60px;color:var(--muted)">
     <div style="font-size:3rem;margin-bottom:12px">✨</div>
     <div>苦手単語はまだありません</div>
     <div style="font-size:.8rem;margin-top:8px">フラッシュカードで「もう一度」を押した単語がここに貯まります</div>
   </div>
+  
   <div class="wlist" id="weak-list"></div>
+  
   <div style="margin-top:16px;text-align:center" id="weak-study-wrap" class="hidden">
     <button class="btn-restart" onclick="studyWeak()">苦手単語を集中練習</button>
   </div>
 </div>
+
 
 </main>
 
@@ -308,10 +327,20 @@ main{flex:1;max-width:740px;width:100%;margin:0 auto;padding:24px 16px}
   reader.onload = function(e) {
     try {
       ALL = JSON.parse(e.target.result);
+      const count = ALL.length;
+
+      // ★追加：全ての入力欄の「最大値」を読み込んだデータ数に合わせる
+      document.querySelectorAll('input[type="number"][max]').forEach(input => {
+        input.max = count;
+        // 初期値が100の「〜まで」の欄を、自動的に全件数にする
+        if(input.id.endsWith('-to') && input.value == "100") input.value = count;
+      });
+
       document.getElementById('data-loader').style.display = 'none';
       applyRange();
       applyQuizRange();
       renderList();
+      renderWeak(); // 苦手タブも初期化
       showToast('読み込み完了！', 'ok');
     } catch(err) {
       alert('エラー：正しいJSONファイルを選択してください');
@@ -319,8 +348,10 @@ main{flex:1;max-width:740px;width:100%;margin:0 auto;padding:24px 16px}
   };
   reader.readAsText(file);
 }
+
 //
 let ALL = [];
+  const maxWordCount = 1935;
 // ─── STATE ───
 let deck=[],idx=0,flipped=false,shuffled=false,dir='en',okCount=0,ngCount=0,voted=new Set();
 let qDeck=[],qIdx=0,qDir='en',qOk=0,qNg=0;
@@ -487,23 +518,50 @@ function restartFlash(){
 }
 
 function updateHdr(){
-  const total=deck.length, done=voted.size, ok=okCount, pct=done?Math.round(ok/done*100):0;
-  document.getElementById('h-range').textContent=total;
-  document.getElementById('h-done').textContent=done;
-  document.getElementById('h-ok').textContent=ok;
-  document.getElementById('h-pct').textContent=done?pct+'%':'—';
+  const total = deck.length, done = voted.size, ok = okCount;
+  const pct = done ? Math.round(ok / done * 100) : 0;
+  
+  // 数値の更新
+  document.getElementById('h-range').textContent = total;
+  document.getElementById('h-done').textContent = done;
+  document.getElementById('h-ok').textContent = ok;
+  document.getElementById('h-pct').textContent = done ? pct + '%' : '—';
+
+  // ★グラフの更新
+  const circle = document.getElementById('chart-fill');
+  const text = document.getElementById('chart-text');
+  if (circle && text) {
+    // 円周の長さを計算して進捗を反映
+    circle.style.strokeDasharray = `${pct} 100`;
+    text.textContent = pct + '%';
+    // 100%になったら色を変える演出
+    circle.style.stroke = pct === 100 ? 'var(--yellow)' : 'var(--green)';
+  }
 }
 
-function studyWeak(){
-  const ws=[...weakSet];
-  if(!ws.length)return;
-  deck=ALL.filter(w=>ws.includes(w.id));
-  if(shuffled)deck=shuffle([...deck]);
-  idx=0;okCount=0;ngCount=0;voted.clear();weakMode=true;
-  document.getElementById('f-done').style.display='none';
-  updateCard();updateHdr();
+
+function studyWeak() {
+  const ws = [...weakSet];
+  const from = parseInt(document.getElementById('w-from').value) || 1;
+  const to = parseInt(document.getElementById('w-to').value) || 1935;
+
+  if (!ws.length) return;
+
+  // 苦手セットの中から、指定範囲内のものだけを抽出
+  deck = ALL.filter(w => ws.includes(w.id) && w.id >= from && w.id <= to);
+
+  if (!deck.length) {
+    showToast('範囲内に苦手単語はありません', 'ng');
+    return;
+  }
+
+  if (shuffled) deck = shuffle([...deck]);
+  idx = 0; okCount = 0; ngCount = 0; voted.clear(); weakMode = true;
+  document.getElementById('f-done').style.display = 'none';
+  updateCard(); updateHdr();
   switchTab('flash');
 }
+
 
 // ─── QUIZ ───
 function getQuizRange(){
@@ -619,19 +677,31 @@ function renderList() {
 }
 
 // ─── WEAK ───
-function renderWeak(){
-  const ws=[...weakSet];
-  document.getElementById('weak-empty').classList.toggle('hidden',ws.length>0);
-  document.getElementById('weak-study-wrap').classList.toggle('hidden',ws.length===0);
-  const el=document.getElementById('weak-list');
-  el.innerHTML='';
-  ALL.filter(w=>ws.includes(w.id)).forEach(w=>{
-    const row=document.createElement('div');
-    row.className='wrow weak';
-    row.innerHTML=`<span class="wnum">${w.id}</span><span class="weng">${w.w}</span><span class="wjpn">${w.m}</span>`;
+function renderWeak() {
+  const ws = [...weakSet];
+  // 範囲を取得
+  const from = parseInt(document.getElementById('w-from').value) || 1;
+  const to = parseInt(document.getElementById('w-to').value) || 1935;
+
+  // 苦手かつ範囲内の単語を抽出
+  const filteredWeak = ALL.filter(w => ws.includes(w.id) && w.id >= from && w.id <= to);
+
+  document.getElementById('weak-empty').classList.toggle('hidden', ws.length > 0);
+  document.getElementById('weak-toolbar').classList.toggle('hidden', ws.length === 0);
+  document.getElementById('weak-study-wrap').classList.toggle('hidden', filteredWeak.length === 0);
+
+  const el = document.getElementById('weak-list');
+  el.innerHTML = '';
+  
+  filteredWeak.forEach(w => {
+    const row = document.createElement('div');
+    row.className = 'wrow weak';
+    row.onclick = () => speech(w.w);
+    row.innerHTML = `<span class="wnum">${w.id}</span><span class="weng">${w.w}</span><span class="wjpn">${w.m}</span>`;
     el.appendChild(row);
   });
 }
+
 
 // ─── TOAST ───
 function showToast(msg,type){
