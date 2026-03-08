@@ -201,9 +201,9 @@
         </div>
       </div>
       <div class='btnrow'>
-        <button class='btn btn-ok' onclick='vote(true)'>✓ 覚えた</button>
+        <button class='btn btn-ok' id='vote-ok' onclick='vote(true)'>✓ 覚えた</button>
         <button class='btn' onclick='flipCard()'>↺ 回転</button>
-        <button class='btn btn-ng' onclick='vote(false)'>✗ 苦手</button>
+        <button class='btn btn-ng' id='vote-ng' onclick='vote(false)'>✗ 苦手</button>
       </div>
       <div class='btnrow'>
         <button class='btn' onclick='go(-1)'>← 前へ</button>
@@ -240,7 +240,7 @@
   </main>
 
   <script>
-    let ALL = [], deck = [], idx = 0, shuffled = false;
+    let ALL = [], deck = [], idx = 0, shuffled = false, isAnimating = false;
     let weakSet = new Set(JSON.parse(localStorage.getItem('leap_weak') || '[]'));
     let okSet = new Set(JSON.parse(localStorage.getItem('leap_ok') || '[]'));
 
@@ -278,18 +278,10 @@
     function applyWeakOnlyFromWeakTab() {
       const f = parseInt(document.getElementById('w-from').value) || 1;
       const t = parseInt(document.getElementById('w-to').value) || 2000;
-      
       deck = ALL.filter(w => w.id >= f && w.id <= t && weakSet.has(w.id));
-      
-      if(!deck.length) {
-        alert('指定された範囲内に苦手単語はありません');
-        return;
-      }
-      
-      // フラッシュカードの入力欄も同期させておく
+      if(!deck.length) { alert('範囲内に苦手単語はありません'); return; }
       document.getElementById('f-from').value = f;
       document.getElementById('f-to').value = t;
-      
       switchTab('flash');
       startDeck();
     }
@@ -301,6 +293,7 @@
 
     function updateCard() {
       if (!deck.length) return;
+      isAnimating = false;
       document.getElementById('card-inner').classList.remove('flip');
       const w = deck[idx];
       document.getElementById('f-num').textContent = document.getElementById('b-num').textContent = 'No. ' + w.id;
@@ -314,10 +307,20 @@
     function flipCard() { document.getElementById('card-inner').classList.toggle('flip'); }
 
     function vote(ok) {
+      if (isAnimating || !deck.length) return;
+      isAnimating = true;
       const w = deck[idx];
       if (ok) { okSet.add(w.id); weakSet.delete(w.id); }
       else { weakSet.add(w.id); okSet.delete(w.id); }
-      saveStatus(); go(1);
+      saveStatus();
+
+      // カードを裏返す
+      document.getElementById('card-inner').classList.add('flip');
+
+      // 1秒後に次のカードへ進む
+      setTimeout(() => {
+        go(1);
+      }, 1000);
     }
 
     function go(d) { if(deck.length) { idx = (idx + d + deck.length) % deck.length; updateCard(); } }
