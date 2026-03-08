@@ -607,6 +607,7 @@ applyQuizRange();
 renderList();
 
   function speech(text) {
+    window.speechSynthesis.cancel();
   // ブラウザの読み上げ機能を呼び出す
   const uttr = new SpeechSynthesisUtterance(text);
   uttr.lang = 'en-US'; // 英語（アメリカ）に設定
