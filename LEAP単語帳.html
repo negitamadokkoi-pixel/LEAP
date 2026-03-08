@@ -115,6 +115,7 @@ main{flex:1;max-width:740px;width:100%;margin:0 auto;padding:24px 16px}
 .wrow{display:flex;gap:12px;padding:12px 16px;background:var(--s1);border:1px solid var(--border);border-radius:9px;align-items:flex-start;transition:border-color .2s;cursor:default}
 .wrow:hover{border-color:var(--muted)}
 .wrow.weak{border-left:3px solid var(--red)}
+.wrow.ok { border-left: 3px solid var(--green); }
 .wnum{font-size:.7rem;color:var(--muted);min-width:34px;padding-top:3px}
 .weng{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;letter-spacing:1px;color:var(--accent);min-width:140px}
 .wjpn{font-size:.83rem;color:var(--text);line-height:1.6}
@@ -666,7 +667,7 @@ function renderList() {
     const isOk = okSet.has(w.id); // ここで覚えたかを判定
 
     const row = document.createElement('div');
-    row.className = 'wrow' + (isWeak ? ' weak' : '');
+    row.className = 'wrow' + (isWeak ? ' weak' : (isOk ? ' ok' : ''));
     row.style.cursor = 'pointer'; 
     row.onclick = () => speech(w.w); 
 
