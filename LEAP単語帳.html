@@ -205,7 +205,7 @@
       <div class='toolbar'>
         <div class='range-row'>
           No.<input type='number' id='f-from' class='tbinput' value='1'>〜<input type='number' id='f-to' class='tbinput' value='100'>
-          <button class='btn-go' onclick='applyRange()'>適用</button>
+          <button class='btn-go' onclick='applyRangeByButton()'>適用</button>
         </div>
         <button class='tbbtn' id='shuf-btn' onclick='toggleShuffle()'>シャッフル</button>
       </div>
@@ -302,6 +302,8 @@
       localStorage.setItem('leap_current_idx', idx);
       localStorage.setItem('leap_session_ok', sessionOk);
       localStorage.setItem('leap_session_ng', sessionNg);
+      localStorage.setItem('leap_range_from', document.getElementById('f-from').value);
+      localStorage.setItem('leap_range_to', document.getElementById('f-to').value);
     }
 
     function changeStatus(id, event) {
@@ -318,12 +320,21 @@
         ALL = JSON.parse(e.target.result);
         document.getElementById('data-loader').style.display = 'none';
         
-        // 保存されたインデックスがあれば復元、なければ新規適用
+        // 保存された範囲を復元
+        const savedFrom = localStorage.getItem('leap_range_from');
+        const savedTo = localStorage.getItem('leap_range_to');
+        if (savedFrom) document.getElementById('f-from').value = savedFrom;
+        if (savedTo) document.getElementById('f-to').value = savedTo;
+
         const savedIdx = parseInt(localStorage.getItem('leap_current_idx') || '-1');
         applyRange(savedIdx >= 0 ? savedIdx : 0);
         updateHdr();
       };
       reader.readAsText(event.target.files[0]);
+    }
+
+    function applyRangeByButton() {
+      applyRange(0); // ボタン押下時は最初から
     }
 
     function applyRange(startIdx = 0) {
