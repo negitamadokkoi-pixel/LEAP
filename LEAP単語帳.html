@@ -210,7 +210,11 @@
         <button class='tbbtn' id='shuf-btn' onclick='toggleShuffle()'>シャッフル</button>
       </div>
       <div class='pgwrap'>
-        <div class='pginfo'><span id='f-prog'>0 / 0</span><span id='f-pct'>0%</span></div>
+        <div class='pginfo'>
+          <span id='f-prog'>0 / 0</span>
+          <span style='margin-left:auto; color:var(--green); font-weight:700; margin-right:15px;'>セッション正答率: <span id='f-accuracy'>0</span>%</span>
+          <span id='f-pct'>0%</span>
+        </div>
         <div class='pgbar'><div class='pgfill' id='f-fill' style='width:0%'></div></div>
       </div>
       <div class='card-scene' onclick='flipCard()'>
@@ -275,6 +279,9 @@
     let ALL = [], deck = [], idx = 0, shuffled = false, isAnimating = false;
     let weakSet = new Set(JSON.parse(localStorage.getItem('leap_weak') || '[]'));
     let okSet = new Set(JSON.parse(localStorage.getItem('leap_ok') || '[]'));
+    
+    // セッション統計用
+    let sessionOk = 0, sessionNg = 0;
 
     function speak(text) {
       if (!text) return;
@@ -313,6 +320,7 @@
       const f = parseInt(document.getElementById('f-from').value) || 1;
       const t = parseInt(document.getElementById('f-to').value) || 2000;
       deck = ALL.filter(w => w.id >= f && w.id <= t);
+      resetSession();
       startDeck();
     }
 
@@ -323,8 +331,21 @@
       if(!deck.length) { alert('範囲内に苦手単語はありません'); return; }
       document.getElementById('f-from').value = f;
       document.getElementById('f-to').value = t;
+      resetSession();
       switchTab('flash');
       startDeck();
+    }
+
+    function resetSession() {
+      sessionOk = 0;
+      sessionNg = 0;
+      updateAccuracy();
+    }
+
+    function updateAccuracy() {
+      const total = sessionOk + sessionNg;
+      const rate = total === 0 ? 0 : Math.round((sessionOk / total) * 100);
+      document.getElementById('f-accuracy').textContent = rate;
     }
 
     function startDeck() {
@@ -358,9 +379,16 @@
       if (isAnimating || !deck.length) return;
       isAnimating = true;
       const w = deck[idx];
-      if (ok) { okSet.add(w.id); weakSet.delete(w.id); }
-      else { weakSet.add(w.id); okSet.delete(w.id); }
+      if (ok) { 
+        okSet.add(w.id); weakSet.delete(w.id); 
+        sessionOk++;
+      }
+      else { 
+        weakSet.add(w.id); okSet.delete(w.id); 
+        sessionNg++;
+      }
       saveStatus();
+      updateAccuracy();
       
       const inner = document.getElementById('card-inner');
       if (!inner.classList.contains('flip')) {
@@ -391,6 +419,7 @@
       const btn = document.getElementById('shuf-btn');
       btn.style.background = shuffled ? 'var(--accent)' : 'var(--s2)';
       btn.style.color = shuffled ? '#fff' : 'var(--muted)';
+      resetSession();
       startDeck();
     }
 
@@ -447,18 +476,13 @@
     function renderList() {
       const searchInput = document.getElementById('search').value.trim();
       const el = document.getElementById('wlist'); el.innerHTML = '';
-      
       const keywords = searchInput.toLowerCase().split(/[\s　]+/).filter(k => k.length > 0);
       
       const filtered = ALL.filter(w => {
         if (keywords.length === 0) return true;
-        // 数字のみの検索ワードはフィルタリング対象から外す（ジャンプ用）
         const textKeywords = keywords.filter(k => isNaN(k));
         if (textKeywords.length === 0) return true; 
-
-        return textKeywords.some(q => {
-          return w.w.toLowerCase().includes(q) || w.m.includes(q);
-        });
+        return textKeywords.some(q => w.w.toLowerCase().includes(q) || w.m.includes(q));
       });
 
       filtered.forEach(w => {
@@ -475,12 +499,10 @@
       });
     }
 
-    // 番号へのジャンプのみを実行する関数
     function jumpToId() {
       const input = document.getElementById('search').value.trim();
       const keywords = input.split(/[\s　]+/);
       const jumpId = keywords.find(k => !isNaN(k) && k !== '');
-
       if (jumpId) {
         const target = document.getElementById('word-row-' + jumpId);
         if (target) {
@@ -489,7 +511,7 @@
           void target.offsetWidth; 
           target.classList.add('jump-target');
         } else {
-          alert('No.' + jumpId + ' は現在のリスト（検索結果）に存在しません');
+          alert('No.' + jumpId + ' は現在のリストに存在しません');
         }
       }
     }
@@ -537,7 +559,6 @@
       return a;
     }
 
-    // 初回レンダリング用にイベントリスナーを追加
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('search').addEventListener('input', renderList);
     });
