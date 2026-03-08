@@ -280,8 +280,8 @@
     let weakSet = new Set(JSON.parse(localStorage.getItem('leap_weak') || '[]'));
     let okSet = new Set(JSON.parse(localStorage.getItem('leap_ok') || '[]'));
     
-    // セッション統計用
-    let sessionOk = 0, sessionNg = 0;
+    let sessionOk = parseInt(localStorage.getItem('leap_session_ok') || '0');
+    let sessionNg = parseInt(localStorage.getItem('leap_session_ng') || '0');
 
     function speak(text) {
       if (!text) return;
@@ -298,6 +298,12 @@
       updateHdr();
     }
 
+    function saveProgress() {
+      localStorage.setItem('leap_current_idx', idx);
+      localStorage.setItem('leap_session_ok', sessionOk);
+      localStorage.setItem('leap_session_ng', sessionNg);
+    }
+
     function changeStatus(id, event) {
       if(event) event.stopPropagation();
       if (okSet.has(id)) { okSet.delete(id); weakSet.add(id); }
@@ -311,16 +317,27 @@
       reader.onload = (e) => {
         ALL = JSON.parse(e.target.result);
         document.getElementById('data-loader').style.display = 'none';
-        applyRange(); updateHdr();
+        
+        // 保存されたインデックスがあれば復元、なければ新規適用
+        const savedIdx = parseInt(localStorage.getItem('leap_current_idx') || '-1');
+        applyRange(savedIdx >= 0 ? savedIdx : 0);
+        updateHdr();
       };
       reader.readAsText(event.target.files[0]);
     }
 
-    function applyRange() {
+    function applyRange(startIdx = 0) {
       const f = parseInt(document.getElementById('f-from').value) || 1;
       const t = parseInt(document.getElementById('f-to').value) || 2000;
       deck = ALL.filter(w => w.id >= f && w.id <= t);
-      resetSession();
+      
+      if (startIdx === 0) {
+        resetSession();
+        idx = 0;
+      } else {
+        idx = Math.min(startIdx, deck.length - 1);
+        updateAccuracy();
+      }
       startDeck();
     }
 
@@ -332,6 +349,7 @@
       document.getElementById('f-from').value = f;
       document.getElementById('f-to').value = t;
       resetSession();
+      idx = 0;
       switchTab('flash');
       startDeck();
     }
@@ -339,6 +357,7 @@
     function resetSession() {
       sessionOk = 0;
       sessionNg = 0;
+      localStorage.setItem('leap_current_idx', 0);
       updateAccuracy();
     }
 
@@ -346,11 +365,12 @@
       const total = sessionOk + sessionNg;
       const rate = total === 0 ? 0 : Math.round((sessionOk / total) * 100);
       document.getElementById('f-accuracy').textContent = rate;
+      saveProgress();
     }
 
     function startDeck() {
       if (shuffled) shuffle(deck);
-      idx = 0; updateCard();
+      updateCard();
     }
 
     function updateCard() {
@@ -362,6 +382,7 @@
       document.getElementById('f-prog').textContent = (idx + 1) + ' / ' + deck.length;
       document.getElementById('f-fill').style.width = ((idx+1)/deck.length*100) + '%';
       document.getElementById('f-pct').textContent = Math.round((idx+1)/deck.length*100) + '%';
+      saveProgress();
       speak(w.w);
     }
 
@@ -420,6 +441,7 @@
       btn.style.background = shuffled ? 'var(--accent)' : 'var(--s2)';
       btn.style.color = shuffled ? '#fff' : 'var(--muted)';
       resetSession();
+      idx = 0;
       startDeck();
     }
 
