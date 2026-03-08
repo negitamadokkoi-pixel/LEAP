@@ -134,25 +134,26 @@
 
     .hidden { display: none !important; }
 
-    /* 印刷専用の絶対非表示設定 */
+    /* 印刷専用設定 */
     #print-container { display: none; }
 
     @media print {
       body * { display: none !important; }
-      #print-container { display: block !important; position: absolute; left: 0; top: 0; width: 100%; color: #000; background: #fff; }
+      #print-container { display: block !important; position: absolute; left: 0; top: 0; width: 100%; color: #000; background: #fff; padding: 0; margin: 0; }
       #print-container * { display: block !important; visibility: visible; }
-      .print-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; text-align: center; border-bottom: 1.5px solid #000; padding-bottom: 8px; }
       
-      /* 縦に3分割のグリッド設定 */
-      .print-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 15px; }
-      .print-item { display: flex; border-bottom: 0.5px solid #ddd; padding: 5px 0; align-items: center; page-break-inside: avoid; overflow: hidden; }
+      .print-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; text-align: center; border-bottom: 1px solid #000; padding-bottom: 5px; color: #000; }
       
-      .print-check { width: 12px; height: 12px; border: 0.8px solid #333; margin-right: 6px; flex-shrink: 0; }
-      .print-no { font-size: 8px; color: #666; width: 30px; flex-shrink: 0; }
-      .print-eng { font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 700; width: 85px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .print-line { flex: 1; border-bottom: 0.8px dotted #aaa; height: 14px; margin-left: 5px; }
+      .print-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+      .print-td { vertical-align: top; width: 33.33%; padding: 0 5px; }
       
-      @page { size: A4; margin: 15mm; }
+      .print-item { display: flex; border-bottom: 0.5px solid #ccc; padding: 4px 0; align-items: center; page-break-inside: avoid; }
+      .print-check { width: 10px; height: 10px; border: 0.5px solid #000; margin-right: 5px; flex-shrink: 0; }
+      .print-no { font-size: 8px; color: #444; width: 25px; flex-shrink: 0; }
+      .print-eng { font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: bold; width: 75px; white-space: nowrap; overflow: hidden; }
+      .print-line { flex: 1; border-bottom: 0.5px dotted #888; height: 12px; margin-left: 3px; }
+      
+      @page { size: A4; margin: 10mm; }
     }
     
     @media (max-width: 600px) {
@@ -257,7 +258,7 @@
         </div>
       </div>
       <div style='text-align: center; margin-bottom: 20px;'>
-        <button class='tbbtn' style='background: var(--red); color: #fff; border: none; padding: 12px 24px; font-weight: bold; border-radius: 10px; cursor: pointer;' onclick='printWeakList()'>⚠️ 苦手リストを3分割PDFで印刷</button>
+        <button class='tbbtn' style='background: var(--red); color: #fff; border: none; padding: 12px 24px; font-weight: bold; border-radius: 10px; cursor: pointer;' onclick='printWeakList()'>⚠️ 苦手リストを3列PDFで印刷</button>
       </div>
       <div id='weak-empty' style='text-align:center;padding:40px;color:var(--muted)'>苦手単語はありません</div>
       <div class='wlist' id='weak-list'></div>
@@ -369,26 +370,36 @@
       
       const printContainer = document.getElementById('print-container');
       let html = `<div class='print-title'>LEAP 苦手単語チェックシート (${new Date().toLocaleDateString()})</div>`;
-      html += `<div class='print-grid'>`;
-      list.forEach(w => {
-        html += `
-          <div class='print-item'>
-            <div class='print-check'></div>
-            <div class='print-no'>${w.id}</div>
-            <div class='print-eng'>${w.w}</div>
-            <div class='print-line'></div>
-          </div>`;
-      });
-      html += `</div>`;
+      
+      // 単語を3列に分配
+      const colCount = 3;
+      const perCol = Math.ceil(list.length / colCount);
+      const cols = [[], [], []];
+      for(let i=0; i<list.length; i++) {
+        cols[Math.floor(i / perCol)].push(list[i]);
+      }
+
+      html += `<table class='print-table'><tr>`;
+      for(let i=0; i<colCount; i++) {
+        html += `<td class='print-td'>`;
+        cols[i].forEach(w => {
+          html += `
+            <div class='print-item'>
+              <div class='print-check'></div>
+              <div class='print-no'>${w.id}</div>
+              <div class='print-eng'>${w.w}</div>
+              <div class='print-line'></div>
+            </div>`;
+        });
+        html += `</td>`;
+      }
+      html += `</tr></table>`;
       
       printContainer.innerHTML = html;
-      
       window.print();
       
-      // 印刷後にコンテナを完全に空にする（上部に残らないようにする）
-      setTimeout(() => {
-        printContainer.innerHTML = '';
-      }, 500);
+      // 印刷後に内容を消去
+      setTimeout(() => { printContainer.innerHTML = ''; }, 1000);
     }
 
     let qDeck = [], qIdx = 0;
