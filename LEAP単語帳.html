@@ -181,7 +181,6 @@
           No.<input type='number' id='f-from' class='tbinput' value='1'>〜<input type='number' id='f-to' class='tbinput' value='100'>
           <button class='btn-go' onclick='applyRange()'>適用</button>
         </div>
-        <button class='tbbtn' onclick='applyWeakOnly()'>⚠️ 苦手のみ</button>
         <button class='tbbtn' id='shuf-btn' onclick='toggleShuffle()'>シャッフル</button>
       </div>
       <div class='pgwrap'>
@@ -218,7 +217,6 @@
           No.<input type='number' id='q-from' class='tbinput' value='1'>〜<input type='number' id='q-to' class='tbinput' value='100'>
           <button class='btn-go' onclick='applyQuizRange()'>適用</button>
         </div>
-        <button class='tbbtn' onclick='applyQuizWeakOnly()'>⚠️ 苦手のみ</button>
       </div>
       <div class='qcard'><div class='qword' id='q-word'>—</div></div>
       <div class='opts' id='q-opts'></div>
@@ -230,7 +228,13 @@
     </div>
 
     <div id='pane-weak' class='hidden'>
-      <div id='weak-empty' style='text-align:center;padding:60px;color:var(--muted)'>苦手単語はありません</div>
+      <div class='toolbar' style='justify-content: center; background: var(--s2); padding: 15px; border-radius: var(--r); margin-bottom: 20px;'>
+        <div class='range-row'>
+          No.<input type='number' id='w-from' class='tbinput' value='1'>〜<input type='number' id='w-to' class='tbinput' value='100'>
+          <button class='btn-go' onclick='applyWeakOnlyFromWeakTab()'>苦手フラッシュ開始</button>
+        </div>
+      </div>
+      <div id='weak-empty' style='text-align:center;padding:40px;color:var(--muted)'>苦手単語はありません</div>
       <div class='wlist' id='weak-list'></div>
     </div>
   </main>
@@ -271,9 +275,22 @@
       startDeck();
     }
 
-    function applyWeakOnly() {
-      deck = ALL.filter(w => weakSet.has(w.id));
-      if(!deck.length) { alert('苦手単語が登録されていません'); return; }
+    function applyWeakOnlyFromWeakTab() {
+      const f = parseInt(document.getElementById('w-from').value) || 1;
+      const t = parseInt(document.getElementById('w-to').value) || 2000;
+      
+      deck = ALL.filter(w => w.id >= f && w.id <= t && weakSet.has(w.id));
+      
+      if(!deck.length) {
+        alert('指定された範囲内に苦手単語はありません');
+        return;
+      }
+      
+      // フラッシュカードの入力欄も同期させておく
+      document.getElementById('f-from').value = f;
+      document.getElementById('f-to').value = t;
+      
+      switchTab('flash');
       startDeck();
     }
 
@@ -318,12 +335,6 @@
       const f = parseInt(document.getElementById('q-from').value) || 1;
       const t = parseInt(document.getElementById('q-to').value) || 2000;
       qDeck = ALL.filter(w => w.id >= f && w.id <= t);
-      startQuiz();
-    }
-
-    function applyQuizWeakOnly() {
-      qDeck = ALL.filter(w => weakSet.has(w.id));
-      if(!qDeck.length) { alert('苦手単語がありません'); return; }
       startQuiz();
     }
 
@@ -381,7 +392,8 @@
 
     function switchTab(t) {
       ['flash', 'quiz', 'list', 'weak'].forEach(x => {
-        document.getElementById('pane-' + x).classList.toggle('hidden', x !== t);
+        const pane = document.getElementById('pane-' + x);
+        if (pane) pane.classList.toggle('hidden', x !== t);
         document.querySelectorAll('.tab').forEach(tab => {
           if(tab.textContent.includes(x === 'flash' ? 'フラッシュ' : x === 'quiz' ? 'クイズ' : x === 'list' ? '一覧' : '苦手')) tab.classList.toggle('active', x === t);
         });
@@ -394,8 +406,10 @@
       document.getElementById('h-range').textContent = deck.length;
       document.getElementById('h-done').textContent = okSet.size + weakSet.size;
       document.getElementById('h-ok').textContent = okSet.size;
-      document.getElementById('chart-fill').setAttribute('stroke-dasharray', `${progress} 100`);
-      document.getElementById('chart-text').textContent = progress + '%';
+      const fill = document.getElementById('chart-fill');
+      if (fill) fill.setAttribute('stroke-dasharray', `${progress} 100`);
+      const txt = document.getElementById('chart-text');
+      if (txt) txt.textContent = progress + '%';
     }
 
     function shuffle(a) {
