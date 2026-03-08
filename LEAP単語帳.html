@@ -99,7 +99,7 @@
     .pgfill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); transition: width .4s; }
 
     .card-scene { perspective: 1200px; cursor: pointer; margin-bottom: 20px; user-select: none; }
-    .card-inner { position: relative; width: 100%; min-height: 280px; transform-style: preserve-3d; transition: transform .55s cubic-bezier(.4, 0, .2, 1); }
+    .card-inner { position: relative; width: 100%; min-height: 280px; transform-style: preserve-3d; transition: transform .4s cubic-bezier(.4, 0, .2, 1); }
     .card-inner.flip { transform: rotateY(180deg); }
     .face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: var(--r); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; text-align: center; border: 1px solid var(--border); }
     .face-front { background: var(--s1); }
@@ -201,9 +201,9 @@
         </div>
       </div>
       <div class='btnrow'>
-        <button class='btn btn-ok' id='vote-ok' onclick='vote(true)'>✓ 覚えた</button>
+        <button class='btn btn-ok' onclick='vote(true)'>✓ 覚えた</button>
         <button class='btn' onclick='flipCard()'>↺ 回転</button>
-        <button class='btn btn-ng' id='vote-ng' onclick='vote(false)'>✗ 苦手</button>
+        <button class='btn btn-ng' onclick='vote(false)'>✗ 苦手</button>
       </div>
       <div class='btnrow'>
         <button class='btn' onclick='go(-1)'>← 前へ</button>
@@ -293,8 +293,6 @@
 
     function updateCard() {
       if (!deck.length) return;
-      isAnimating = false;
-      document.getElementById('card-inner').classList.remove('flip');
       const w = deck[idx];
       document.getElementById('f-num').textContent = document.getElementById('b-num').textContent = 'No. ' + w.id;
       document.getElementById('f-word').textContent = document.getElementById('b-eng').textContent = w.w;
@@ -304,7 +302,7 @@
       document.getElementById('f-pct').textContent = Math.round((idx+1)/deck.length*100) + '%';
     }
 
-    function flipCard() { document.getElementById('card-inner').classList.toggle('flip'); }
+    function flipCard() { if(!isAnimating) document.getElementById('card-inner').classList.toggle('flip'); }
 
     function vote(ok) {
       if (isAnimating || !deck.length) return;
@@ -314,16 +312,31 @@
       else { weakSet.add(w.id); okSet.delete(w.id); }
       saveStatus();
 
-      // カードを裏返す
+      // 1. 裏返して答えを見せる
       document.getElementById('card-inner').classList.add('flip');
 
-      // 1秒後に次のカードへ進む
+      // 2. 1秒待機して答えを確認させる
       setTimeout(() => {
-        go(1);
+        // 3. 表面に戻すアニメーションを開始
+        document.getElementById('card-inner').classList.remove('flip');
+        
+        // 4. アニメーションが完了するのを待ってから中身を書き換える
+        // (transitionが0.4sなので、少し余裕を持って待機)
+        setTimeout(() => {
+          idx = (idx + 1) % deck.length;
+          updateCard();
+          isAnimating = false;
+        }, 350); 
       }, 1000);
     }
 
-    function go(d) { if(deck.length) { idx = (idx + d + deck.length) % deck.length; updateCard(); } }
+    function go(d) { 
+      if(!isAnimating && deck.length) { 
+        document.getElementById('card-inner').classList.remove('flip');
+        idx = (idx + d + deck.length) % deck.length; 
+        updateCard(); 
+      } 
+    }
 
     function toggleShuffle() {
       shuffled = !shuffled;
