@@ -3,10 +3,9 @@
 <head>
   <meta charset='UTF-8'>
   <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-  <title>LEAP 単語帳 - セッション完全保存版</title>
+  <title>LEAP 単語帳 - 完全統合版</title>
   <link href='https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Noto+Sans+JP:wght@300;400;700&family=Bebas+Neue&display=swap' rel='stylesheet'>
   <style>
-    /* スタイルは以前の回答と同じものを継承（省略せず含めます） */
     :root { --bg: #07080f; --s1: #0f1018; --s2: #171825; --s3: #1e2030; --accent: #5b8dee; --green: #3ecf8e; --red: #f06570; --text: #e2e4f0; --muted: #5a5e80; --border: #22243a; --r: 14px; }
     body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
     header { background: var(--s1); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; }
@@ -39,6 +38,12 @@
     .btn { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--s2); color: var(--text); cursor: pointer; font-weight: bold; }
     .btn-ok { border-color: var(--green); color: var(--green); }
     .btn-ng { border-color: var(--red); color: var(--red); }
+    .qcard { background: var(--s1); border: 1px solid var(--border); border-radius: var(--r); padding: 40px 20px; text-align: center; margin-bottom: 20px; }
+    .qword { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; color: var(--text); }
+    .opts { display: flex; flex-direction: column; gap: 10px; }
+    .opt { background: var(--s2); border: 1px solid var(--border); padding: 15px; border-radius: 10px; cursor: pointer; text-align: left; }
+    .opt.correct { background: var(--green) !important; color: #000; font-weight: bold; }
+    .opt.wrong { background: var(--red) !important; color: #fff; }
     .hidden { display: none !important; }
   </style>
 </head>
@@ -61,6 +66,7 @@
 
   <div class='tabs'>
     <div class='tab active' onclick='switchTab(`flash`)'>📇 フラッシュ</div>
+    <div class='tab' onclick='switchTab(`quiz`)'>🎯 クイズ</div>
     <div class='tab' onclick='switchTab(`list`)'>📋 一覧</div>
     <div class='tab' onclick='switchTab(`weak`)'>⚠️ 苦手</div>
   </div>
@@ -75,57 +81,46 @@
         <button class='tbbtn' id='shuf-btn' onclick='toggleShuffle()'>シャッフル</button>
       </div>
       <div class='pgwrap'>
-        <div class='pginfo'>
-          <span id='f-prog'>0 / 0</span>
-          <span style='margin-left:auto; color:var(--green);'>セッション正答率: <span id='f-accuracy'>0</span>%</span>
-          <span id='f-pct' style="margin-left:10px;">0%</span>
-        </div>
+        <div class='pginfo'><span id='f-prog'>0 / 0</span><span style='margin-left:auto; color:var(--green);'>セッション正解: <span id='f-accuracy'>0</span>%</span><span id='f-pct' style="margin-left:10px;">0%</span></div>
         <div class='pgbar'><div class='pgfill' id='f-fill' style='width:0%'></div></div>
       </div>
       <div class='card-scene' onclick='flipCard()'>
         <div class='card-inner' id='card-inner'>
-          <div class='face face-front'>
-            <div id='f-num' style="font-size:0.8rem;color:var(--muted)">—</div>
-            <div class='face-word' id='f-word'>—</div>
-          </div>
-          <div class='face face-back'>
-            <div id='b-num' style="font-size:0.8rem;color:var(--muted)">—</div>
-            <div class='face-eng' id='b-eng'>—</div>
-            <div id='b-meaning' style='font-size:1.1rem;'>—</div>
-          </div>
+          <div class='face face-front'><div id='f-num' style="font-size:0.8rem;color:var(--muted)">—</div><div class='face-word' id='f-word'>—</div></div>
+          <div class='face face-back'><div id='b-num' style="font-size:0.8rem;color:var(--muted)">—</div><div class='face-eng' id='b-eng'>—</div><div id='b-meaning' style='font-size:1.1rem;'>—</div></div>
         </div>
       </div>
-      <div class='btnrow'>
-        <button class='btn btn-ok' onclick='vote(true)'>✓ 覚えた</button>
-        <button class='btn' onclick='flipCard()'>↺ 回転</button>
-        <button class='btn btn-ng' onclick='vote(false)'>✗ 苦手</button>
-      </div>
-      <div class='btnrow'>
-        <button class='btn' onclick='go(-1)'>← 前へ</button>
-        <button class='btn' onclick='go(1)'>次へ →</button>
-      </div>
+      <div class='btnrow'><button class='btn btn-ok' onclick='vote(true)'>✓ 覚えた</button><button class='btn' onclick='flipCard()'>↺ 回転</button><button class='btn btn-ng' onclick='vote(false)'>✗ 苦手</button></div>
+      <div class='btnrow'><button class='btn' onclick='go(-1)'>← 前へ</button><button class='btn' onclick='go(1)'>次へ →</button></div>
     </div>
-    
-    <div id='pane-list' class='hidden'><div id='wlist' style="display:flex;flex-direction:column;gap:8px;"></div></div>
-    <div id='pane-weak' class='hidden'><div id='weak-list' style="display:flex;flex-direction:column;gap:8px;"></div></div>
+
+    <div id='pane-quiz' class='hidden'>
+      <div class='toolbar'>
+        No.<input type='number' id='q-from' class='tbinput' value='1'>〜<input type='number' id='q-to' class='tbinput' value='100'>
+        <button class='btn-go' onclick='applyQuizRangeByButton()'>開始</button>
+      </div>
+      <div class='qcard'><div class='qword' id='q-word'>—</div></div>
+      <div class='opts' id='q-opts'></div>
+    </div>
+
+    <div id='pane-list' class='hidden'><div id='wlist'></div></div>
+    <div id='pane-weak' class='hidden'><div id='weak-list'></div></div>
   </main>
 
   <script>
-    let ALL = [], deck = [], idx = 0, shuffled = false, isAnimating = false;
+    let ALL = [], deck = [], qDeck = [], idx = 0, qIdx = 0, shuffled = false, isAnimating = false;
     let weakSet = new Set(JSON.parse(localStorage.getItem('leap_weak') || '[]'));
     let okSet = new Set(JSON.parse(localStorage.getItem('leap_ok') || '[]'));
-    let sessionOk = parseInt(localStorage.getItem('leap_session_ok') || '0');
-    let sessionNg = parseInt(localStorage.getItem('leap_session_ng') || '0');
+    let sessionOk = 0, sessionNg = 0;
 
     function saveProgress() {
       localStorage.setItem('leap_current_idx', idx);
-      localStorage.setItem('leap_session_ok', sessionOk);
-      localStorage.setItem('leap_session_ng', sessionNg);
+      localStorage.setItem('leap_q_idx', qIdx);
       localStorage.setItem('leap_range_from', document.getElementById('f-from').value);
       localStorage.setItem('leap_range_to', document.getElementById('f-to').value);
       localStorage.setItem('leap_shuffled', shuffled);
-      // デッキ（単語IDの配列）を保存することで「出た・出てない」を永続化
       localStorage.setItem('leap_current_deck', JSON.stringify(deck.map(w => w.id)));
+      localStorage.setItem('leap_q_deck', JSON.stringify(qDeck.map(w => w.id)));
     }
 
     function loadData(event) {
@@ -134,23 +129,27 @@
         ALL = JSON.parse(e.target.result);
         document.getElementById('data-loader').style.display = 'none';
 
-        // 設定の復元
         shuffled = localStorage.getItem('leap_shuffled') === 'true';
-        document.getElementById('f-from').value = localStorage.getItem('leap_range_from') || 1;
-        document.getElementById('f-to').value = localStorage.getItem('leap_range_to') || 100;
+        document.getElementById('f-from').value = document.getElementById('q-from').value = localStorage.getItem('leap_range_from') || 1;
+        document.getElementById('f-to').value = document.getElementById('q-to').value = localStorage.getItem('leap_range_to') || 100;
         updateShuffleBtnUI();
 
         const savedDeckIds = JSON.parse(localStorage.getItem('leap_current_deck') || '[]');
-        const savedIdx = parseInt(localStorage.getItem('leap_current_idx') || '0');
-
+        const savedQDeckIds = JSON.parse(localStorage.getItem('leap_q_deck') || '[]');
+        
         if (savedDeckIds.length > 0) {
-          // 保存されたIDリストから現在のデッキオブジェクトを復元
           deck = savedDeckIds.map(id => ALL.find(w => w.id === id)).filter(Boolean);
-          idx = savedIdx;
-          updateCard();
+          idx = parseInt(localStorage.getItem('leap_current_idx') || '0');
         } else {
           applyRange(0);
         }
+
+        if (savedQDeckIds.length > 0) {
+          qDeck = savedQDeckIds.map(id => ALL.find(w => w.id === id)).filter(Boolean);
+          qIdx = parseInt(localStorage.getItem('leap_q_idx') || '0');
+        }
+
+        updateCard();
         updateHdr();
       };
       reader.readAsText(event.target.files[0]);
@@ -162,17 +161,43 @@
       deck = ALL.filter(w => w.id >= f && w.id <= t);
       if (shuffled) shuffle(deck);
       idx = startIdx;
-      resetSessionStats();
       updateCard();
     }
 
-    function applyRangeByButton() {
-      applyRange(0);
+    function applyRangeByButton() { applyRange(0); sessionOk = 0; sessionNg = 0; updateAccuracy(); }
+
+    function applyQuizRangeByButton() {
+      const f = parseInt(document.getElementById('q-from').value);
+      const t = parseInt(document.getElementById('q-to').value);
+      qDeck = ALL.filter(w => w.id >= f && w.id <= t);
+      shuffle(qDeck);
+      qIdx = 0;
+      nextQuestion();
     }
 
-    function resetSessionStats() {
-      sessionOk = 0; sessionNg = 0;
-      updateAccuracy();
+    function nextQuestion() {
+      if (!qDeck.length || qIdx >= qDeck.length) { alert('クイズ終了！'); return; }
+      const correct = qDeck[qIdx];
+      const choices = shuffle([correct, ...shuffle([...ALL.filter(w => w.id !== correct.id)]).slice(0, 3)]);
+      document.getElementById('q-word').textContent = correct.w;
+      speak(correct.w);
+      const optContainer = document.getElementById('q-opts');
+      optContainer.innerHTML = '';
+      choices.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'opt'; div.textContent = c.m;
+        div.onclick = () => {
+          if (div.classList.contains('correct') || div.classList.contains('wrong')) return;
+          if (c.id === correct.id) {
+            div.classList.add('correct'); okSet.add(correct.id); weakSet.delete(correct.id);
+            saveStatus(); saveProgress(); setTimeout(() => { qIdx++; nextQuestion(); }, 600);
+          } else {
+            div.classList.add('wrong'); weakSet.add(correct.id); okSet.delete(correct.id); saveStatus();
+          }
+        };
+        optContainer.appendChild(div);
+      });
+      saveProgress();
     }
 
     function updateCard() {
@@ -194,54 +219,33 @@
       const w = deck[idx];
       if (ok) { okSet.add(w.id); weakSet.delete(w.id); sessionOk++; }
       else { weakSet.add(w.id); okSet.delete(w.id); sessionNg++; }
-      
-      saveStatus();
-      updateAccuracy();
-      
+      saveStatus(); updateAccuracy();
       const inner = document.getElementById('card-inner');
       if (!inner.classList.contains('flip')) inner.classList.add('flip');
-
       setTimeout(() => {
         inner.classList.remove('flip');
-        setTimeout(() => {
-          idx = (idx + 1) % deck.length;
-          updateCard();
-          isAnimating = false;
-        }, 350);
+        setTimeout(() => { idx = (idx + 1) % deck.length; updateCard(); isAnimating = false; }, 350);
       }, 800);
     }
 
-    function toggleShuffle() {
-      shuffled = !shuffled;
-      updateShuffleBtnUI();
-      applyRange(0);
-    }
-
-    function updateShuffleBtnUI() {
-      const btn = document.getElementById('shuf-btn');
-      btn.style.background = shuffled ? 'var(--accent)' : 'var(--s2)';
-      btn.style.color = shuffled ? '#fff' : 'var(--muted)';
-    }
-
-    function shuffle(a) {
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      return a;
-    }
-
-    function updateAccuracy() {
-      const total = sessionOk + sessionNg;
-      document.getElementById('f-accuracy').textContent = total === 0 ? 0 : Math.round((sessionOk / total) * 100);
-      saveProgress();
-    }
-
+    function toggleShuffle() { shuffled = !shuffled; updateShuffleBtnUI(); applyRange(0); }
+    function updateShuffleBtnUI() { const btn = document.getElementById('shuf-btn'); btn.style.background = shuffled ? 'var(--accent)' : 'var(--s2)'; btn.style.color = shuffled ? '#fff' : 'var(--muted)'; }
+    function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+    function updateAccuracy() { const total = sessionOk + sessionNg; document.getElementById('f-accuracy').textContent = total === 0 ? 0 : Math.round((sessionOk / total) * 100); }
     function go(d) { if(!isAnimating) { idx = (idx + d + deck.length) % deck.length; updateCard(); } }
     function flipCard() { if(!isAnimating) document.getElementById('card-inner').classList.toggle('flip'); }
     function saveStatus() { localStorage.setItem('leap_weak', JSON.stringify([...weakSet])); localStorage.setItem('leap_ok', JSON.stringify([...okSet])); updateHdr(); }
     function updateHdr() { document.getElementById('h-range').textContent = deck.length; document.getElementById('h-done').textContent = okSet.size + weakSet.size; document.getElementById('h-ok').textContent = okSet.size; }
-    function switchTab(t) { ['flash', 'list', 'weak'].forEach(x => document.getElementById('pane-' + x).classList.toggle('hidden', x !== t)); }
+    function switchTab(t) { 
+      ['flash', 'quiz', 'list', 'weak'].forEach(x => {
+        const p = document.getElementById('pane-' + x);
+        if(p) p.classList.toggle('hidden', x !== t);
+        document.querySelectorAll('.tab').forEach(tab => {
+          if(tab.textContent.includes(x === 'flash' ? 'フラッシュ' : x === 'quiz' ? 'クイズ' : x === 'list' ? '一覧' : '苦手')) tab.classList.toggle('active', x === t);
+        });
+      });
+      if(t === 'quiz' && qDeck.length > 0) nextQuestion();
+    }
     function speak(t) { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = 'en-US'; speechSynthesis.speak(u); }
   </script>
 </body>
