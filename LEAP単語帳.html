@@ -16,6 +16,28 @@
 }
 body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
 
+.scroll-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  z-index: 1000;
+  font-size: 1.2rem;
+  opacity: 0.8;
+}
+.scroll-btn:hover { opacity: 1; transform: translateY(-2px); }
+
+  
 /* ── HEADER ── */
 header{background:var(--s1);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .logo{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:6px;color:var(--accent)}
@@ -119,6 +141,7 @@ main{flex:1;max-width:740px;width:100%;margin:0 auto;padding:24px 16px}
 </style>
 </head>
 <body>
+  <button class="scroll-btn" onclick="window.scrollTo({top:0, behavior:'smooth'})">↑</button>
 <div id='data-loader' style='padding: 20px; background: var(--s2); text-align: center; border-bottom: 1px solid var(--border);'>
   <p style='margin-bottom: 12px; font-size: 0.9rem; color: var(--muted);'>単語データを読み込んで開始</p>
   <label style='background: var(--accent); color: #fff; padding: 8px 16px; border-radius: var(--r); cursor: pointer; font-weight: bold;'>
@@ -128,7 +151,7 @@ main{flex:1;max-width:740px;width:100%;margin:0 auto;padding:24px 16px}
 </div>
 
 <header>
-  <div class="logo">LEAP <em>単語帳</em></div>
+  < class="logo">LEAP <em>単語帳</em></div>
   <div class="hstats">
     <div class="hstat"><strong id="h-range">100</strong>範囲</div>
     <div class="hstat"><strong id="h-done">0</strong>完了</div>
@@ -244,9 +267,18 @@ main{flex:1;max-width:740px;width:100%;margin:0 auto;padding:24px 16px}
 <div id="pane-list" class="hidden">
   <div class="search-wrap">
     <input class="search" type="text" id="search" placeholder="単語や意味で検索（例: agree, 賛成）" oninput="renderList()">
+    
+    <div style="display:flex; gap:8px; margin-top:8px; overflow-x:auto; padding-bottom:8px;">
+      <button class="tbbtn" onclick="window.scrollTo({top:document.body.scrollHeight, behavior:'smooth'})">一番下へ</button>
+      <button class="tbbtn" onclick="scrollToId(500)">500〜</button>
+      <button class="tbbtn" onclick="scrollToId(1000)">1000〜</button>
+      <button class="tbbtn" onclick="scrollToId(1500)">1500〜</button>
+    </div>
   </div>
+
   <div class="wlist" id="wlist"></div>
 </div>
+
 
 <!-- ═══ WEAK ═══ -->
 <div id="pane-weak" class="hidden">
@@ -613,6 +645,17 @@ renderList();
   uttr.lang = 'en-US'; // 英語（アメリカ）に設定
   uttr.rate = 0.9;     // 少しゆっくりめに再生（1.0が標準）
   window.speechSynthesis.speak(uttr);
+}
+
+  function scrollToId(id) {
+  const rows = document.querySelectorAll('.wrow');
+  for (let row of rows) {
+    const num = parseInt(row.querySelector('.wnum').textContent);
+    if (num >= id) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      break;
+    }
+  }
 }
 
 </script>
