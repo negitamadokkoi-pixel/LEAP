@@ -560,6 +560,9 @@ function renderList(){
    src.forEach(w=>{
     const row=document.createElement('div');
     row.className='wrow'+(weakSet.has(w.id)?' weak':'');
+     row.style.cursor = 'pointer'; 
+    row.onclick = () => speech(w.w); 
+
     row.innerHTML=`<span class="wnum">${w.id}</span><span class="weng">${w.w}</span><span class="wjpn">${w.m}</span>${weakSet.has(w.id)?'<span class="wbadge">苦手</span>':''}`;
     el.appendChild(row);
   });}
