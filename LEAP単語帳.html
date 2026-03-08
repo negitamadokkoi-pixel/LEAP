@@ -154,10 +154,11 @@ main{flex:1;max-width:740px;width:100%;margin:0 auto;padding:24px 16px}
   <div class="logo">LEAP <em>単語帳</em></div>
   <div class="hstats" style="align-items: center;">
   <div class="hstat" style="position:relative; width:46px; height:46px; margin-right:4px;">
-    <svg viewBox="0 0 36 36" style="transform: rotate(-90deg); width: 100%; height: 100%;">
-      <circle cx="18" cy="18" r="16" fill="none" stroke="var(--border)" stroke-width="3.5"></circle>
-      <circle id="chart-fill" cx="18" cy="18" r="16" fill="none" stroke="var(--green)" stroke-width="3.5" stroke-dasharray="0 100" stroke-linecap="round" style="transition: stroke-dasharray 0.5s ease;"></circle>
-    </svg>
+ <svg viewBox="0 0 36 36" style="transform: rotate(-90deg); width: 100%; height: 100%;">
+  <circle cx="18" cy="18" r="16" fill="none" stroke="var(--border)" stroke-width="3.5"></circle>
+  <circle id="chart-ng" cx="18" cy="18" r="16" fill="none" stroke="var(--red)" stroke-width="3.5" stroke-dasharray="0 100" stroke-linecap="round" style="transition: stroke-dasharray 0.5s ease;"></circle>
+  <circle id="chart-fill" cx="18" cy="18" r="16" fill="none" stroke="var(--green)" stroke-width="3.5" stroke-dasharray="0 100" stroke-linecap="round" style="transition: stroke-dasharray 0.5s ease;"></circle>
+</svg>
     <div id="chart-text" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; font-family:'Bebas Neue'; color:var(--text);">0%</div>
   </div>
 
@@ -518,26 +519,33 @@ function restartFlash(){
 }
 
 function updateHdr(){
-  const total = deck.length, done = voted.size, ok = okCount;
-  const pct = done ? Math.round(ok / done * 100) : 0;
+  const total = deck.length, done = voted.size, ok = okCount, ng = ngCount;
+  // 全体に対する割合を計算
+  const okPct = total ? Math.round(ok / total * 100) : 0;
+  const ngPct = total ? Math.round(ng / total * 100) : 0;
+  // テキスト用の正答率（解いた分の中での正解率）
+  const scorePct = done ? Math.round(ok / done * 100) : 0;
   
   // 数値の更新
   document.getElementById('h-range').textContent = total;
   document.getElementById('h-done').textContent = done;
   document.getElementById('h-ok').textContent = ok;
-  document.getElementById('h-pct').textContent = done ? pct + '%' : '—';
 
-  // ★グラフの更新
-  const circle = document.getElementById('chart-fill');
+  // グラフの更新
+  const circleOk = document.getElementById('chart-fill');
+  const circleNg = document.getElementById('chart-ng');
   const text = document.getElementById('chart-text');
-  if (circle && text) {
-    // 円周の長さを計算して進捗を反映
-    circle.style.strokeDasharray = `${pct} 100`;
-    text.textContent = pct + '%';
-    // 100%になったら色を変える演出
-    circle.style.stroke = pct === 100 ? 'var(--yellow)' : 'var(--green)';
+  
+  if (circleOk && circleNg && text) {
+    // 赤いバー（不正解）をまず描画
+    circleNg.style.strokeDasharray = `${ngPct + okPct} 100`; 
+    // その上に緑のバー（正解）を重ねる
+    circleOk.style.strokeDasharray = `${okPct} 100`;
+    
+    text.textContent = scorePct + '%';
   }
 }
+
 
 
 function studyWeak() {
