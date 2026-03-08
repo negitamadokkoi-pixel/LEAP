@@ -589,20 +589,35 @@ function showQDone(){
 function restartQuiz(){document.getElementById('q-done').style.display='none';applyQuizRange()}
 
 // ─── LIST ───
-function renderList(){
-  const q=(document.getElementById('search').value||'').toLowerCase();
-  const src=q?ALL.filter(w=>w.w.toLowerCase().includes(q)||w.m.includes(q)):ALL;
-  const el=document.getElementById('wlist');
-  el.innerHTML='';
-   src.forEach(w=>{
-    const row=document.createElement('div');
-    row.className='wrow'+(weakSet.has(w.id)?' weak':'');
-     row.style.cursor = 'pointer'; 
+function renderList() {
+  const q = (document.getElementById('search').value || '').toLowerCase().trim();
+  
+  // スペース（全角・半角）で分割
+  const keywords = q.split(/[\s　]+/).filter(k => k.length > 0);
+  
+  // いずれかのキーワードが含まれているかチェックする（OR検索）
+  const src = keywords.length > 0 
+    ? ALL.filter(w => {
+        const targetText = (w.w + w.m).toLowerCase();
+        // one of the keywords matches
+        return keywords.some(kw => targetText.includes(kw));
+      })
+    : ALL;
+
+  const el = document.getElementById('wlist');
+  el.innerHTML = '';
+  
+  src.forEach(w => {
+    const row = document.createElement('div');
+    row.className = 'wrow' + (weakSet.has(w.id) ? ' weak' : '');
+    row.style.cursor = 'pointer'; 
     row.onclick = () => speech(w.w); 
 
-    row.innerHTML=`<span class="wnum">${w.id}</span><span class="weng">${w.w}</span><span class="wjpn">${w.m}</span>${weakSet.has(w.id)?'<span class="wbadge">苦手</span>':''}`;
+    row.innerHTML = `<span class="wnum">${w.id}</span><span class="weng">${w.w}</span><span class="wjpn">${w.m}</span>${weakSet.has(w.id) ? '<span class="wbadge">苦手</span>' : ''}`;
     el.appendChild(row);
-  });}
+  });
+}
+
 // ─── WEAK ───
 function renderWeak(){
   const ws=[...weakSet];
