@@ -134,19 +134,20 @@
 
     .hidden { display: none !important; }
 
-    /* 印刷用スタイル */
+    /* 印刷用スタイル設定 */
+    #print-area { display: none; }
+
     @media print {
-      body * { visibility: hidden; }
-      #print-area, #print-area * { visibility: visible; }
-      #print-area { position: absolute; left: 0; top: 0; width: 100%; color: #000; background: #fff; }
-      .scroll-btn, header, .tabs, .toolbar, .btnrow, .pgwrap, #data-loader { display: none !important; }
+      body * { display: none !important; }
+      #print-area { display: block !important; position: absolute; left: 0; top: 0; width: 100%; color: #000; background: #fff; }
+      #print-area * { display: block !important; visibility: visible; }
       .print-title { font-size: 20px; font-weight: bold; margin-bottom: 20px; text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; }
       .print-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 30px; }
       .print-item { display: flex; border-bottom: 1px solid #ccc; padding: 8px 0; align-items: center; page-break-inside: avoid; }
-      .print-check { width: 18px; height: 18px; border: 1px solid #000; margin-right: 10px; }
+      .print-check { width: 16px; height: 16px; border: 1px solid #000; margin-right: 10px; }
       .print-no { font-size: 10px; color: #666; width: 35px; }
-      .print-eng { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: bold; width: 140px; }
-      .print-line { flex: 1; border-bottom: 1px dotted #999; height: 20px; margin-left: 10px; }
+      .print-eng { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: bold; width: 130px; }
+      .print-line { flex: 1; border-bottom: 1px dotted #999; height: 18px; margin-left: 10px; }
     }
     
     @media (max-width: 600px) {
@@ -361,6 +362,7 @@
       const list = ALL.filter(w => weakSet.has(w.id));
       if(!list.length) { alert('苦手単語がありません'); return; }
       
+      const printArea = document.getElementById('print-area');
       let html = `<div class='print-title'>LEAP 苦手単語チェックリスト (${new Date().toLocaleDateString()})</div>`;
       html += `<div class='print-grid'>`;
       list.forEach(w => {
@@ -374,8 +376,15 @@
       });
       html += `</div>`;
       
-      document.getElementById('print-area').innerHTML = html;
+      printArea.innerHTML = html;
+      
+      // 印刷を実行
       window.print();
+      
+      // 印刷ダイアログを閉じた後に中身を空にして非表示にする
+      setTimeout(() => {
+        printArea.innerHTML = '';
+      }, 500);
     }
 
     let qDeck = [], qIdx = 0;
