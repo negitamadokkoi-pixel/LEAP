@@ -151,7 +151,7 @@ main{flex:1;max-width:740px;width:100%;margin:0 auto;padding:24px 16px}
 </div>
 
 <header>
-  < class="logo">LEAP <em>単語帳</em></div>
+  <div class="logo">LEAP <em>単語帳</em></div>
   <div class="hstats">
     <div class="hstat"><strong id="h-range">100</strong>範囲</div>
     <div class="hstat"><strong id="h-done">0</strong>完了</div>
@@ -267,6 +267,11 @@ main{flex:1;max-width:740px;width:100%;margin:0 auto;padding:24px 16px}
 <div id="pane-list" class="hidden">
   <div class="search-wrap">
     <input class="search" type="text" id="search" placeholder="単語や意味で検索（例: agree, 賛成）" oninput="renderList()">
+<div style="display:flex; gap:8px; margin-bottom:12px; align-items:center;">
+  <label style="font-size:0.8rem; color:var(--muted)">No.</label>
+  <input type="number" id="jump-no" class="tbinput" placeholder="例: 777" style="width:80px">
+  <button class="btn-go" onclick="jumpToNo()">ジャンプ</button>
+</div>
     
     <div style="display:flex; gap:8px; margin-top:8px; overflow-x:auto; padding-bottom:8px;">
       <button class="tbbtn" onclick="window.scrollTo({top:document.body.scrollHeight, behavior:'smooth'})">一番下へ</button>
@@ -656,6 +661,29 @@ renderList();
       break;
     }
   }
+}
+
+
+  function jumpToNo() {
+  const val = parseInt(document.getElementById('jump-no').value);
+  if (!val) return;
+  
+  // 入力された番号へジャンプ
+  scrollToId(val);
+  
+  // ジャンプしたあとに、その単語をパッと光らせる（おまけ演出）
+  setTimeout(() => {
+    const rows = document.querySelectorAll('.wrow');
+    for (let row of rows) {
+      const num = parseInt(row.querySelector('.wnum').textContent);
+      if (num === val) {
+        row.style.transition = 'background 0.3s';
+        row.style.background = 'var(--s3)'; // 一時的に色を変える
+        setTimeout(() => row.style.background = 'var(--s1)', 1000);
+        break;
+      }
+    }
+  }, 500);
 }
 
 </script>
