@@ -133,6 +133,21 @@
     .wbadge.weak { background: rgba(240, 101, 112, .15); color: var(--red); border-color: var(--red); }
 
     .hidden { display: none !important; }
+
+    /* 印刷用スタイル */
+    @media print {
+      body * { visibility: hidden; }
+      #print-area, #print-area * { visibility: visible; }
+      #print-area { position: absolute; left: 0; top: 0; width: 100%; color: #000; background: #fff; }
+      .scroll-btn, header, .tabs, .toolbar, .btnrow, .pgwrap, #data-loader { display: none !important; }
+      .print-title { font-size: 20px; font-weight: bold; margin-bottom: 20px; text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; }
+      .print-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 30px; }
+      .print-item { display: flex; border-bottom: 1px solid #ccc; padding: 8px 0; align-items: center; page-break-inside: avoid; }
+      .print-check { width: 18px; height: 18px; border: 1px solid #000; margin-right: 10px; }
+      .print-no { font-size: 10px; color: #666; width: 35px; }
+      .print-eng { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: bold; width: 140px; }
+      .print-line { flex: 1; border-bottom: 1px dotted #999; height: 20px; margin-left: 10px; }
+    }
     
     @media (max-width: 600px) {
       .face-word { font-size: 2.8rem; }
@@ -142,6 +157,7 @@
   </style>
 </head>
 <body>
+  <div id='print-area'></div>
   <button class='scroll-btn' onclick='window.scrollTo({top:0,behavior:`smooth`})'>↑</button>
 
   <div id='data-loader' style='padding:20px;background:var(--s2);text-align:center;border-bottom:1px solid var(--border);'>
@@ -234,6 +250,9 @@
           <button class='btn-go' onclick='applyWeakOnlyFromWeakTab()'>苦手フラッシュ開始</button>
         </div>
       </div>
+      <div style='text-align: center; margin-bottom: 20px;'>
+        <button class='tbbtn' style='background: var(--red); color: #fff; border: none; padding: 10px 20px;' onclick='printWeakList()'>⚠️ 苦手リストをPDF印刷</button>
+      </div>
       <div id='weak-empty' style='text-align:center;padding:40px;color:var(--muted)'>苦手単語はありません</div>
       <div class='wlist' id='weak-list'></div>
     </div>
@@ -311,17 +330,9 @@
       if (ok) { okSet.add(w.id); weakSet.delete(w.id); }
       else { weakSet.add(w.id); okSet.delete(w.id); }
       saveStatus();
-
-      // 1. 裏返して答えを見せる
       document.getElementById('card-inner').classList.add('flip');
-
-      // 2. 1秒待機して答えを確認させる
       setTimeout(() => {
-        // 3. 表面に戻すアニメーションを開始
         document.getElementById('card-inner').classList.remove('flip');
-        
-        // 4. アニメーションが完了するのを待ってから中身を書き換える
-        // (transitionが0.4sなので、少し余裕を持って待機)
         setTimeout(() => {
           idx = (idx + 1) % deck.length;
           updateCard();
@@ -344,6 +355,27 @@
       btn.style.background = shuffled ? 'var(--accent)' : 'var(--s2)';
       btn.style.color = shuffled ? '#fff' : 'var(--muted)';
       startDeck();
+    }
+
+    function printWeakList() {
+      const list = ALL.filter(w => weakSet.has(w.id));
+      if(!list.length) { alert('苦手単語がありません'); return; }
+      
+      let html = `<div class='print-title'>LEAP 苦手単語チェックリスト (${new Date().toLocaleDateString()})</div>`;
+      html += `<div class='print-grid'>`;
+      list.forEach(w => {
+        html += `
+          <div class='print-item'>
+            <div class='print-check'></div>
+            <div class='print-no'>No.${w.id}</div>
+            <div class='print-eng'>${w.w}</div>
+            <div class='print-line'></div>
+          </div>`;
+      });
+      html += `</div>`;
+      
+      document.getElementById('print-area').innerHTML = html;
+      window.print();
     }
 
     let qDeck = [], qIdx = 0;
