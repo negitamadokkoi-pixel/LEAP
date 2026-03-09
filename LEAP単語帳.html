@@ -7,7 +7,7 @@
   <title>LEAP 単語帳</title>
   <link href='https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Noto+Sans+JP:wght@300;400;700&family=Bebas+Neue&display=swap' rel='stylesheet'>
   <style>
-    html, body, div, span, h1, h2, p, a, em, strong, svg, circle, header, main, nav, input, button, label {
+    html, body, div, span, h1, h2, p, a, em, strong, svg, circle, header, main, nav, input, button, label, select {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
@@ -81,8 +81,8 @@
     .hstat { text-align: center; font-size: .7rem; color: var(--muted); line-height: 1.2; }
     .hstat strong { display: block; font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 1px; color: var(--text); }
 
-    .tabs { display: flex; background: var(--s1); border-bottom: 1px solid var(--border); }
-    .tab { flex: 1; padding: 14px; text-align: center; cursor: pointer; font-size: .85rem; color: var(--muted); border-bottom: 2px solid transparent; transition: all .2s; user-select: none; }
+    .tabs { display: flex; background: var(--s1); border-bottom: 1px solid var(--border); overflow-x: auto; white-space: nowrap; }
+    .tab { flex: 1; padding: 14px; text-align: center; cursor: pointer; font-size: .85rem; color: var(--muted); border-bottom: 2px solid transparent; transition: all .2s; user-select: none; min-width: 70px; }
     .tab.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(91, 141, 238, .06); }
 
     main { flex: 1; max-width: 740px; width: 100%; margin: 0 auto; padding: 24px 16px; }
@@ -163,6 +163,7 @@
       .face-word { font-size: 2.8rem; }
       .wrow { flex-wrap: wrap; }
       .wbadge { margin-left: auto; }
+      .tabs { padding-bottom: 5px; }
     }
   </style>
 </head>
@@ -198,6 +199,7 @@
     <div class='tab' onclick='switchTab(`quiz`)'>🎯 クイズ</div>
     <div class='tab' onclick='switchTab(`list`)'>📋 一覧</div>
     <div class='tab' onclick='switchTab(`weak`)'>⚠️ 苦手</div>
+    <div class='tab' onclick='switchTab(`listen`)'>🎧 聞き流し</div>
   </div>
 
   <main>
@@ -273,6 +275,38 @@
       <div id='weak-empty' style='text-align:center;padding:40px;color:var(--muted)'>苦手単語はありません</div>
       <div class='wlist' id='weak-list'></div>
     </div>
+
+    <div id='pane-listen' class='hidden'>
+      <div class='toolbar' style='justify-content:center; flex-direction:column; gap:15px; background:var(--s2); padding:20px; border-radius:var(--r); margin-bottom: 20px;'>
+        <div class='range-row' style='justify-content:center; flex-wrap:wrap; gap:10px;'>
+          No.<input type='number' id='l-from' class='tbinput' value='1'>〜<input type='number' id='l-to' class='tbinput' value='100'>
+        </div>
+        <div class='range-row' style='justify-content:center; flex-wrap:wrap; gap:10px;'>
+          対象:
+          <select id='l-target' class='tbinput' style='width:auto;'>
+            <option value='all'>すべて</option>
+            <option value='weak'>苦手のみ</option>
+          </select>
+          速度:
+          <select id='l-speed' class='tbinput' style='width:auto;'>
+            <option value='0.8'>0.8倍</option>
+            <option value='1.0' selected>1.0倍</option>
+            <option value='1.2'>1.2倍</option>
+            <option value='1.5'>1.5倍</option>
+          </select>
+        </div>
+        <div style='display:flex; gap:10px; justify-content:center; margin-top:5px;'>
+          <button class='btn-go' id='btn-listen-play' onclick='toggleListen()' style='width:120px;'>▶ 再生</button>
+          <button class='tbbtn' onclick='stopListen()'>■ 停止</button>
+        </div>
+      </div>
+      <div class='qcard' style='min-height:220px; display:flex; flex-direction:column; justify-content:center;'>
+        <div class='face-num' id='l-num'>—</div>
+        <div class='face-eng' id='l-eng' style='font-size:2.8rem; margin:15px 0; color:var(--accent); font-family:`Bebas Neue`, sans-serif;'>—</div>
+        <div id='l-jpn' style='font-size:1.2rem; color:var(--text); min-height:2em;'>—</div>
+      </div>
+    </div>
+
   </main>
 
   <script>
@@ -285,8 +319,13 @@
 
     shuffled = localStorage.getItem('leap_shuffled') === 'true';
 
+    // 聞き流し用変数
+    let isListening = false;
+    let listenDeck = [];
+    let listenIdx = 0;
+
     function speak(text) {
-      if (!text) return;
+      if (!text || isListening) return; // 聞き流し中は通常の個別音声をブロック
       speechSynthesis.cancel();
       const uttr = new SpeechSynthesisUtterance(text);
       uttr.lang = 'en-US';
@@ -307,7 +346,6 @@
       localStorage.setItem('leap_range_from', document.getElementById('f-from').value);
       localStorage.setItem('leap_range_to', document.getElementById('f-to').value);
       localStorage.setItem('leap_shuffled', shuffled);
-      // シャッフル後の並び順（IDリスト）を保存
       localStorage.setItem('leap_current_deck', JSON.stringify(deck.map(w => w.id)));
     }
 
@@ -335,10 +373,8 @@
         
         updateShuffleBtnUI();
         
-        // 保存されたデッキがあり、かつ範囲設定が一致していれば復元
         if (savedDeckIds.length > 0) {
           const restoredDeck = savedDeckIds.map(id => ALL.find(w => w.id === id)).filter(Boolean);
-          // 念のため範囲チェック
           const f = parseInt(document.getElementById('f-from').value) || 1;
           const t = parseInt(document.getElementById('f-to').value) || 2000;
           if (restoredDeck.every(w => w.id >= f && w.id <= t) && restoredDeck.length > 0) {
@@ -468,14 +504,19 @@
     }
 
     function switchTab(t) {
-      ['flash', 'quiz', 'list', 'weak'].forEach(x => {
+      if(isListening) stopListen();
+      window.speechSynthesis.cancel();
+
+      ['flash', 'quiz', 'list', 'weak', 'listen'].forEach(x => {
         const pane = document.getElementById('pane-' + x);
         if (pane) pane.classList.toggle('hidden', x !== t);
         document.querySelectorAll('.tab').forEach(tab => {
-          if(tab.textContent.includes(x === 'flash' ? 'フラッシュ' : x === 'quiz' ? 'クイズ' : x === 'list' ? '一覧' : '苦手')) tab.classList.toggle('active', x === t);
+          const tText = x === 'flash' ? 'フラッシュ' : x === 'quiz' ? 'クイズ' : x === 'list' ? '一覧' : x === 'weak' ? '苦手' : '聞き流し';
+          if(tab.textContent.includes(tText)) tab.classList.toggle('active', x === t);
         });
       });
-      if(t === 'weak') renderWeak(); if(t === 'list') renderList();
+      if(t === 'weak') renderWeak(); 
+      if(t === 'list') renderList();
     }
 
     function updateHdr() {
@@ -497,6 +538,100 @@
     function renderWeak() { const el = document.getElementById('weak-list'); el.innerHTML = ''; const list = ALL.filter(w => weakSet.has(w.id)); document.getElementById('weak-empty').classList.toggle('hidden', list.length > 0); list.forEach(w => { const row = document.createElement('div'); row.className = 'wrow weak'; row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${w.m}</span><button class='wbadge weak' onclick='changeStatus(${w.id}, event)'>苦手</button>`; row.onclick = () => speak(w.w); el.appendChild(row); }); }
     function applyWeakOnlyFromWeakTab() { const f = parseInt(document.getElementById('w-from').value) || 1; const t = parseInt(document.getElementById('w-to').value) || 2000; deck = ALL.filter(w => w.id >= f && w.id <= t && weakSet.has(w.id)); if(!deck.length) { alert('範囲内に苦手単語はありません'); return; } document.getElementById('f-from').value = f; document.getElementById('f-to').value = t; resetSession(); idx = 0; switchTab('flash'); updateCard(); }
     function printWeakList() { const list = ALL.filter(w => weakSet.has(w.id)); if(!list.length) { alert('苦手単語がありません'); return; } const printContainer = document.getElementById('print-container'); let html = `<div class='print-title'>LEAP 苦手単語チェックシート (${new Date().toLocaleDateString()})</div>`; html += `<div class='print-columns'>`; list.forEach(w => { html += `<div class='print-item'><div class='print-check'></div><div class='print-no'>${w.id}</div><div class='print-eng'>${w.w}</div><div class='print-line'></div></div>`; }); html += `</div>`; printContainer.innerHTML = html; window.print(); setTimeout(() => { printContainer.innerHTML = ''; }, 800); }
+
+    // 聞き流し機能のメイン処理
+    function extractFirstMeaning(m) {
+      if (!m) return '';
+      // 「②」か改行の前までを切り出し、「①」を除去する
+      return m.split('②')[0].split('\n')[0].replace(/①/g, '').trim();
+    }
+
+    function toggleListen() {
+      if (isListening) {
+        window.speechSynthesis.pause();
+        isListening = false;
+        document.getElementById('btn-listen-play').textContent = '▶ 再開';
+      } else {
+        if (listenIdx === 0 || !listenDeck.length) {
+          const f = parseInt(document.getElementById('l-from').value) || 1;
+          const t = parseInt(document.getElementById('l-to').value) || 2000;
+          const target = document.getElementById('l-target').value;
+          
+          if (target === 'weak') {
+            listenDeck = ALL.filter(w => w.id >= f && w.id <= t && weakSet.has(w.id));
+          } else {
+            listenDeck = ALL.filter(w => w.id >= f && w.id <= t);
+          }
+          
+          if (!listenDeck.length) {
+            alert('対象の単語がありません');
+            return;
+          }
+          listenIdx = 0;
+        }
+        isListening = true;
+        document.getElementById('btn-listen-play').textContent = '⏸ 一時停止';
+        window.speechSynthesis.resume();
+        if(!window.speechSynthesis.speaking) {
+           playListenStep();
+        }
+      }
+    }
+
+    function stopListen() {
+      isListening = false;
+      listenIdx = 0;
+      listenDeck = [];
+      window.speechSynthesis.cancel();
+      document.getElementById('btn-listen-play').textContent = '▶ 再生';
+      document.getElementById('l-num').textContent = '—';
+      document.getElementById('l-eng').textContent = '—';
+      document.getElementById('l-jpn').textContent = '—';
+    }
+
+    function playListenStep() {
+      if (!isListening) return;
+      if (listenIdx >= listenDeck.length) {
+        alert('聞き流しが完了しました');
+        stopListen();
+        return;
+      }
+
+      const w = listenDeck[listenIdx];
+      const speed = parseFloat(document.getElementById('l-speed').value);
+      
+      document.getElementById('l-num').textContent = 'No. ' + w.id;
+      document.getElementById('l-eng').textContent = w.w;
+      document.getElementById('l-jpn').textContent = '...';
+
+      const uttrEn = new SpeechSynthesisUtterance(w.w);
+      uttrEn.lang = 'en-US';
+      uttrEn.rate = speed;
+      
+      uttrEn.onend = () => {
+        if (!isListening) return;
+        
+        const jpText = extractFirstMeaning(w.m);
+        document.getElementById('l-jpn').textContent = jpText;
+        
+        const uttrJp = new SpeechSynthesisUtterance(jpText);
+        uttrJp.lang = 'ja-JP';
+        uttrJp.rate = speed;
+        
+        uttrJp.onend = () => {
+          if (!isListening) return;
+          listenIdx++;
+          // 速度に合わせてインターバルを調整
+          setTimeout(() => {
+            if (isListening) playListenStep();
+          }, 800 / speed);
+        };
+        
+        window.speechSynthesis.speak(uttrJp);
+      };
+      
+      window.speechSynthesis.speak(uttrEn);
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('search').addEventListener('input', renderList);
