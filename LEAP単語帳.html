@@ -94,7 +94,13 @@
     .btn-go { background: var(--accent); color: #fff; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-weight: 700; border: none; font-size: 0.82rem; }
 
     .pgwrap { margin-bottom: 18px; }
-    .pginfo { display: flex; justify-content: space-between; font-size: .75rem; color: var(--muted); margin-bottom: 5px; }
+    .pginfo {
+      display: flex;
+      justify-content: space-between;
+      font-size: .75rem;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
     .pgbar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
     .pgfill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); transition: width .4s; }
 
@@ -327,17 +333,31 @@
 
     shuffled = localStorage.getItem('leap_shuffled') === 'true';
 
-    let isListening = false;
-    let listenDeck = [];
-    let listenIdx = 0;
+    let isListening = false, listenDeck = [], listenIdx = 0;
 
-    function speak(text) {
-      if (!text || isListening) return;
-      speechSynthesis.cancel();
+    // 品詞記号 [名] [動] などを取り除く共通関数
+    function cleanText(t) {
+      if (!t) return '';
+      return t.replace(/\[[^\]]+\]/g, '').trim();
+    }
+
+    // 聞き流し用の特殊抽出（①や【】もカット）
+    function extractFirstMeaning(m) {
+      if (!m) return '';
+      return m.split('②')[0].split('\n')[0]
+        .replace(/①/g, '')
+        .replace(/【[^】]+】/g, '')
+        .replace(/\[[^\]]+\]/g, '')
+        .trim();
+    }
+
+    function speak(text, lang = 'en-US', speed = 1.0, callback) {
+      if (!text) return;
       const uttr = new SpeechSynthesisUtterance(text);
-      uttr.lang = 'en-US';
-      uttr.rate = 1.0;
-      speechSynthesis.speak(uttr);
+      uttr.lang = lang;
+      uttr.rate = speed;
+      if (callback) uttr.onend = callback;
+      window.speechSynthesis.speak(uttr);
     }
 
     function saveStatus() {
@@ -387,43 +407,33 @@
           if (restoredDeck.every(w => w.id >= f && w.id <= t) && restoredDeck.length > 0) {
             deck = restoredDeck;
             idx = savedIdx;
-            updateAccuracy();
           } else {
             applyRange(0);
           }
         } else {
           applyRange(0);
         }
+        updateAccuracy();
         updateCard();
         updateHdr();
       };
       reader.readAsText(event.target.files[0]);
     }
 
-    function applyRangeByButton() {
-      applyRange(0);
-    }
+    function applyRangeByButton() { applyRange(0); }
 
     function applyRange(startIdx = 0) {
       const f = parseInt(document.getElementById('f-from').value) || 1;
       const t = parseInt(document.getElementById('f-to').value) || 2000;
       deck = ALL.filter(w => w.id >= f && w.id <= t);
-      
-      if (shuffled) {
-        shuffle(deck);
-      }
-
+      if (shuffled) shuffle(deck);
       idx = startIdx;
       if (startIdx === 0) resetSession();
       updateAccuracy();
       updateCard();
     }
 
-    function resetSession() {
-      sessionOk = 0;
-      sessionNg = 0;
-      updateAccuracy();
-    }
+    function resetSession() { sessionOk = 0; sessionNg = 0; updateAccuracy(); }
 
     function updateAccuracy() {
       const total = sessionOk + sessionNg;
@@ -437,40 +447,28 @@
       const w = deck[idx];
       document.getElementById('f-num').textContent = document.getElementById('b-num').textContent = 'No. ' + w.id;
       document.getElementById('f-word').textContent = document.getElementById('b-eng').textContent = w.w;
-      document.getElementById('b-meaning').textContent = w.m;
+      document.getElementById('b-meaning').textContent = cleanText(w.m); // 品詞カット
       document.getElementById('f-prog').textContent = (idx + 1) + ' / ' + deck.length;
       document.getElementById('f-fill').style.width = ((idx+1)/deck.length / 0.01) + '%';
       document.getElementById('f-pct').textContent = Math.round((idx+1)/deck.length / 0.01) + '%';
       saveProgress();
+      window.speechSynthesis.cancel();
       speak(w.w);
     }
 
-    function flipCard() { 
-      if(!isAnimating) {
-        const inner = document.getElementById('card-inner');
-        inner.classList.toggle('flip');
-      } 
-    }
+    function flipCard() { if(!isAnimating) document.getElementById('card-inner').classList.toggle('flip'); }
 
     function vote(ok) {
       if (isAnimating || !deck.length) return;
       isAnimating = true;
       const w = deck[idx];
-      if (ok) { 
-        okSet.add(w.id); weakSet.delete(w.id); 
-        sessionOk++;
-      }
-      else { 
-        weakSet.add(w.id); okSet.delete(w.id); 
-        sessionNg++;
-      }
+      if (ok) { okSet.add(w.id); weakSet.delete(w.id); sessionOk++; }
+      else { weakSet.add(w.id); okSet.delete(w.id); sessionNg++; }
       saveStatus();
       updateAccuracy();
       
       const inner = document.getElementById('card-inner');
-      if (!inner.classList.contains('flip')) {
-        inner.classList.add('flip');
-      }
+      if (!inner.classList.contains('flip')) inner.classList.add('flip');
       
       setTimeout(() => {
         inner.classList.remove('flip');
@@ -482,13 +480,7 @@
       }, 1000);
     }
 
-    function go(d) { 
-      if(!isAnimating && deck.length) { 
-        document.getElementById('card-inner').classList.remove('flip');
-        idx = (idx + d + deck.length) % deck.length; 
-        updateCard(); 
-      } 
-    }
+    function go(d) { if(!isAnimating && deck.length) { document.getElementById('card-inner').classList.remove('flip'); idx = (idx + d + deck.length) % deck.length; updateCard(); } }
 
     function updateShuffleBtnUI() {
       const btn = document.getElementById('shuf-btn');
@@ -496,15 +488,11 @@
       btn.style.color = shuffled ? '#fff' : 'var(--muted)';
     }
 
-    function toggleShuffle() {
-      shuffled = !shuffled;
-      updateShuffleBtnUI();
-      applyRange(0);
-    }
+    function toggleShuffle() { shuffled = !shuffled; updateShuffleBtnUI(); applyRange(0); }
 
     function shuffle(a) {
       for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() / (1 / (i + 1)));
+        const j = Math.floor(Math.random() * (i + 1));
         [a[i], a[j]] = [a[j], a[i]];
       }
       return a;
@@ -513,7 +501,6 @@
     function switchTab(t) {
       if(isListening) stopListen();
       window.speechSynthesis.cancel();
-
       ['flash', 'quiz', 'list', 'weak', 'listen'].forEach(x => {
         const pane = document.getElementById('pane-' + x);
         if (pane) pane.classList.toggle('hidden', x !== t);
@@ -537,18 +524,109 @@
       if (txt) txt.textContent = progress + '%';
     }
 
+    let qDeck = [], qIdx = 0;
     function applyQuizRange() { const f = parseInt(document.getElementById('q-from').value) || 1; const t = parseInt(document.getElementById('q-to').value) || 2000; qDeck = ALL.filter(w => w.id >= f && w.id <= t); startQuiz(); }
     function startQuiz() { shuffle(qDeck); qIdx = 0; nextQuestion(); }
-    function nextQuestion() { if (qIdx >= qDeck.length) { alert('終了'); return; } const correct = qDeck[qIdx]; const choices = [correct, ...shuffle([...ALL.filter(w => w.id !== correct.id)]).slice(0, 3)]; shuffle(choices); document.getElementById('q-word').textContent = correct.w; speak(correct.w); const optContainer = document.getElementById('q-opts'); optContainer.innerHTML = ''; choices.forEach(c => { const div = document.createElement('div'); div.className = 'opt'; div.textContent = c.m; div.onclick = () => { if (div.classList.contains('correct') || div.classList.contains('wrong')) return; if (c.id === correct.id) { div.classList.add('correct'); okSet.add(correct.id); weakSet.delete(correct.id); saveStatus(); setTimeout(() => { qIdx++; nextQuestion(); }, 600); } else { div.classList.add('wrong'); weakSet.add(correct.id); okSet.delete(correct.id); saveStatus(); } }; optContainer.appendChild(div); }); }
-    function renderList() { const searchInput = document.getElementById('search').value.trim(); const el = document.getElementById('wlist'); el.innerHTML = ''; const keywords = searchInput.toLowerCase().split(/[\s　]+/).filter(k => k.length > 0); const filtered = ALL.filter(w => { if (keywords.length === 0) return true; const textKeywords = keywords.filter(k => isNaN(k)); if (textKeywords.length === 0) return true; return textKeywords.some(q => w.w.toLowerCase().includes(q) || w.m.includes(q)); }); filtered.forEach(w => { const isW = weakSet.has(w.id), isO = okSet.has(w.id); const row = document.createElement('div'); row.className = 'wrow' + (isW ? ' weak' : isO ? ' ok' : ''); row.id = 'word-row-' + w.id; let label = '未着手', bCls = 'wbadge'; if (isW) { label = '苦手'; bCls += ' weak'; } else if (isO) { label = '覚えた'; bCls += ' ok'; } row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${w.m}</span><button class='${bCls}' onclick='changeStatus(${w.id}, event)'>${label}</button>`; row.onclick = () => speak(w.w); el.appendChild(row); }); }
-    function jumpToId() { const input = document.getElementById('search').value.trim(); const keywords = input.split(/[\s　]+/); const jumpId = keywords.find(k => !isNaN(k) && k !== ''); if (jumpId) { const target = document.getElementById('word-row-' + jumpId); if (target) { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); target.classList.remove('jump-target'); void target.offsetWidth; target.classList.add('jump-target'); } else { alert('No.' + jumpId + ' は現在のリストに存在しません'); } } }
-    function renderWeak() { const el = document.getElementById('weak-list'); el.innerHTML = ''; const list = ALL.filter(w => weakSet.has(w.id)); document.getElementById('weak-empty').classList.toggle('hidden', list.length > 0); list.forEach(w => { const row = document.createElement('div'); row.className = 'wrow weak'; row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${w.m}</span><button class='wbadge weak' onclick='changeStatus(${w.id}, event)'>苦手</button>`; row.onclick = () => speak(w.w); el.appendChild(row); }); }
-    function applyWeakOnlyFromWeakTab() { const f = parseInt(document.getElementById('w-from').value) || 1; const t = parseInt(document.getElementById('w-to').value) || 2000; deck = ALL.filter(w => w.id >= f && w.id <= t && weakSet.has(w.id)); if(!deck.length) { alert('範囲内に苦手単語はありません'); return; } document.getElementById('f-from').value = f; document.getElementById('f-to').value = t; resetSession(); idx = 0; switchTab('flash'); updateCard(); }
-    function printWeakList() { const list = ALL.filter(w => weakSet.has(w.id)); if(!list.length) { alert('苦手単語がありません'); return; } const printContainer = document.getElementById('print-container'); let html = `<div class='print-title'>LEAP 苦手単語チェックシート (${new Date().toLocaleDateString()})</div>`; html += `<div class='print-columns'>`; list.forEach(w => { html += `<div class='print-item'><div class='print-check'></div><div class='print-no'>${w.id}</div><div class='print-eng'>${w.w}</div><div class='print-line'></div></div>`; }); html += `</div>`; printContainer.innerHTML = html; window.print(); setTimeout(() => { printContainer.innerHTML = ''; }, 800); }
+    function nextQuestion() { 
+      if (qIdx >= qDeck.length) { alert('終了'); return; } 
+      const correct = qDeck[qIdx]; 
+      const choices = [correct, ...shuffle([...ALL.filter(w => w.id !== correct.id)]).slice(0, 3)]; 
+      shuffle(choices); 
+      document.getElementById('q-word').textContent = correct.w; 
+      speak(correct.w); 
+      const optContainer = document.getElementById('q-opts'); 
+      optContainer.innerHTML = ''; 
+      choices.forEach(c => { 
+        const div = document.createElement('div'); 
+        div.className = 'opt'; 
+        div.textContent = cleanText(c.m); // クイズ選択肢の品詞カット
+        div.onclick = () => { 
+          if (div.classList.contains('correct') || div.classList.contains('wrong')) return; 
+          if (c.id === correct.id) { 
+            div.classList.add('correct'); okSet.add(correct.id); weakSet.delete(correct.id); saveStatus(); 
+            setTimeout(() => { qIdx++; nextQuestion(); }, 600); 
+          } else { 
+            div.classList.add('wrong'); weakSet.add(correct.id); okSet.delete(correct.id); saveStatus(); 
+          } 
+        }; 
+        optContainer.appendChild(div); 
+      }); 
+    }
 
-    function extractFirstMeaning(m) {
-      if (!m) return '';
-      return m.split('②')[0].split('\n')[0].replace(/①/g, '').replace(/【[^】]+】/g, '').trim();
+    function renderList() { 
+      const searchInput = document.getElementById('search').value.trim(); 
+      const el = document.getElementById('wlist'); 
+      el.innerHTML = ''; 
+      const keywords = searchInput.toLowerCase().split(/[\s　]+/).filter(k => k.length > 0); 
+      const filtered = ALL.filter(w => { 
+        if (keywords.length === 0) return true; 
+        const textKeywords = keywords.filter(k => isNaN(k)); 
+        if (textKeywords.length === 0) return true; 
+        return textKeywords.every(q => w.w.toLowerCase().includes(q) || w.m.includes(q)); 
+      }); 
+      filtered.forEach(w => { 
+        const isW = weakSet.has(w.id), isO = okSet.has(w.id); 
+        const row = document.createElement('div'); 
+        row.className = 'wrow' + (isW ? ' weak' : isO ? ' ok' : ''); 
+        row.id = 'word-row-' + w.id; 
+        let label = '未着手', bCls = 'wbadge'; 
+        if (isW) { label = '苦手'; bCls += ' weak'; } else if (isO) { label = '覚えた'; bCls += ' ok'; } 
+        row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${cleanText(w.m)}</span><button class='${bCls}' onclick='changeStatus(${w.id}, event)'>${label}</button>`; 
+        row.onclick = () => speak(w.w); 
+        el.appendChild(row); 
+      }); 
+    }
+
+    function jumpToId() { 
+      const input = document.getElementById('search').value.trim(); 
+      const keywords = input.split(/[\s　]+/); 
+      const jumpId = keywords.find(k => !isNaN(k) && k !== ''); 
+      if (jumpId) { 
+        const target = document.getElementById('word-row-' + jumpId); 
+        if (target) { 
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
+          target.classList.remove('jump-target'); void target.offsetWidth; target.classList.add('jump-target'); 
+        } else { alert('No.' + jumpId + ' は現在のリストに存在しません'); } 
+      } 
+    }
+
+    function renderWeak() { 
+      const el = document.getElementById('weak-list'); 
+      el.innerHTML = ''; 
+      const list = ALL.filter(w => weakSet.has(w.id)); 
+      document.getElementById('weak-empty').classList.toggle('hidden', list.length > 0); 
+      list.forEach(w => { 
+        const row = document.createElement('div'); 
+        row.className = 'wrow weak'; 
+        row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${cleanText(w.m)}</span><button class='wbadge weak' onclick='changeStatus(${w.id}, event)'>苦手</button>`; 
+        row.onclick = () => speak(w.w); 
+        el.appendChild(row); 
+      }); 
+    }
+
+    function applyWeakOnlyFromWeakTab() { 
+      const f = parseInt(document.getElementById('w-from').value) || 1; 
+      const t = parseInt(document.getElementById('w-to').value) || 2000; 
+      deck = ALL.filter(w => w.id >= f && w.id <= t && weakSet.has(w.id)); 
+      if(!deck.length) { alert('範囲内に苦手単語はありません'); return; } 
+      document.getElementById('f-from').value = f; 
+      document.getElementById('f-to').value = t; 
+      resetSession(); 
+      idx = 0; 
+      switchTab('flash'); 
+      updateCard(); 
+    }
+
+    function printWeakList() { 
+      const list = ALL.filter(w => weakSet.has(w.id)); 
+      if(!list.length) { alert('苦手単語がありません'); return; } 
+      const printContainer = document.getElementById('print-container'); 
+      let html = `<div class='print-title'>LEAP 苦手単語チェックシート (${new Date().toLocaleDateString()})</div><div class='print-columns'>`; 
+      list.forEach(w => { html += `<div class='print-item'><div class='print-check'></div><div class='print-no'>${w.id}</div><div class='print-eng'>${w.w}</div><div class='print-line'></div></div>`; }); 
+      html += `</div>`; 
+      printContainer.innerHTML = html; 
+      window.print(); 
+      setTimeout(() => { printContainer.innerHTML = ''; }, 800); 
     }
 
     function toggleListen() {
@@ -561,86 +639,50 @@
           const f = parseInt(document.getElementById('l-from').value) || 1;
           const t = parseInt(document.getElementById('l-to').value) || 2000;
           const target = document.getElementById('l-target').value;
-          
-          if (target === 'weak') {
-            listenDeck = ALL.filter(w => w.id >= f && w.id <= t && weakSet.has(w.id));
-          } else {
-            listenDeck = ALL.filter(w => w.id >= f && w.id <= t);
-          }
-          
-          if (!listenDeck.length) {
-            alert('対象の単語がありません');
-            return;
-          }
+          listenDeck = ALL.filter(w => w.id >= f && w.id <= t && (target === 'all' || weakSet.has(w.id)));
+          if (!listenDeck.length) { alert('対象の単語がありません'); return; }
           listenIdx = 0;
         }
         isListening = true;
         document.getElementById('btn-listen-play').textContent = '⏸ 一時停止';
         window.speechSynthesis.resume();
-        if(!window.speechSynthesis.speaking) {
-           playListenStep();
-        }
+        if(!window.speechSynthesis.speaking) playListenStep();
       }
     }
 
     function stopListen() {
-      isListening = false;
-      listenIdx = 0;
-      listenDeck = [];
+      isListening = false; listenIdx = 0; listenDeck = [];
       window.speechSynthesis.cancel();
       document.getElementById('btn-listen-play').textContent = '▶ 再生';
-      document.getElementById('l-num').textContent = '—';
-      document.getElementById('l-eng').textContent = '—';
-      document.getElementById('l-jpn').textContent = '—';
+      document.getElementById('l-num').textContent = '—'; document.getElementById('l-eng').textContent = '—'; document.getElementById('l-jpn').textContent = '—';
     }
 
     function playListenStep() {
       if (!isListening) return;
-      if (listenIdx >= listenDeck.length) {
-        alert('聞き流しが完了しました');
-        stopListen();
-        return;
-      }
+      if (listenIdx >= listenDeck.length) { alert('聞き流しが完了しました'); stopListen(); return; }
 
       const w = listenDeck[listenIdx];
       const speed = parseFloat(document.getElementById('l-speed').value);
+      const intervalSec = parseFloat(document.getElementById('l-interval').value);
       
       document.getElementById('l-num').textContent = 'No. ' + w.id;
       document.getElementById('l-eng').textContent = w.w;
       document.getElementById('l-jpn').textContent = '...';
 
-      const uttrEn = new SpeechSynthesisUtterance(w.w);
-      uttrEn.lang = 'en-US';
-      uttrEn.rate = speed;
-      
-      uttrEn.onend = () => {
-        if (!isListening) return;
-        
-        const intervalSec = parseFloat(document.getElementById('l-interval').value);
-        
+      // 英語の読み上げ
+      speak(w.w, 'en-US', speed, () => {
         setTimeout(() => {
           if (!isListening) return;
-          
-          const jpText = extractFirstMeaning(w.m);
+          const jpText = extractFirstMeaning(w.m); // 品詞なしの第一義
           document.getElementById('l-jpn').textContent = jpText;
           
-          const uttrJp = new SpeechSynthesisUtterance(jpText);
-          uttrJp.lang = 'ja-JP';
-          uttrJp.rate = speed;
-          
-          uttrJp.onend = () => {
-            if (!isListening) return;
+          // 日本語の読み上げ
+          speak(jpText, 'ja-JP', speed, () => {
             listenIdx++;
-            setTimeout(() => {
-              if (isListening) playListenStep();
-            }, 800 / speed);
-          };
-          
-          window.speechSynthesis.speak(uttrJp);
-        }, intervalSec / 0.001);
-      };
-      
-      window.speechSynthesis.speak(uttrEn);
+            setTimeout(() => { if (isListening) playListenStep(); }, 800 / speed);
+          });
+        }, intervalSec * 1000);
+      });
     }
 
     document.addEventListener('DOMContentLoaded', () => {
