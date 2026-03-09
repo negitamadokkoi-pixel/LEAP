@@ -146,9 +146,9 @@
     .hidden { display: none !important; }
 
     @media print {
-      body * { display: none !important; }
+      body > :not(#print-container) { display: none !important; }
       #print-container { display: block !important; position: absolute; left: 0; top: 0; width: 100%; color: #000; background: #fff; }
-      #print-container * { display: block !important; visibility: visible; }
+      #print-container div { display: block !important; visibility: visible; }
       .print-title { font-size: 14px; font-weight: bold; margin-bottom: 10px; text-align: center; border-bottom: 1px solid #000; padding-bottom: 4px; }
       .print-columns { column-count: 3; column-gap: 20px; column-rule: 0.5px solid #eee; }
       .print-item { display: flex; border-bottom: 0.5px solid #ddd; padding: 4px 0; align-items: center; page-break-inside: avoid; }
@@ -294,6 +294,14 @@
             <option value='1.2'>1.2倍</option>
             <option value='1.5'>1.5倍</option>
           </select>
+          間隔:
+          <select id='l-interval' class='tbinput' style='width:auto;'>
+            <option value='0'>0秒</option>
+            <option value='0.5'>0.5秒</option>
+            <option value='1.0' selected>1.0秒</option>
+            <option value='1.5'>1.5秒</option>
+            <option value='2.0'>2.0秒</option>
+          </select>
         </div>
         <div style='display:flex; gap:10px; justify-content:center; margin-top:5px;'>
           <button class='btn-go' id='btn-listen-play' onclick='toggleListen()' style='width:120px;'>▶ 再生</button>
@@ -319,13 +327,12 @@
 
     shuffled = localStorage.getItem('leap_shuffled') === 'true';
 
-    // 聞き流し用変数
     let isListening = false;
     let listenDeck = [];
     let listenIdx = 0;
 
     function speak(text) {
-      if (!text || isListening) return; // 聞き流し中は通常の個別音声をブロック
+      if (!text || isListening) return;
       speechSynthesis.cancel();
       const uttr = new SpeechSynthesisUtterance(text);
       uttr.lang = 'en-US';
@@ -420,7 +427,7 @@
 
     function updateAccuracy() {
       const total = sessionOk + sessionNg;
-      const rate = total === 0 ? 0 : Math.round((sessionOk / total) * 100);
+      const rate = total === 0 ? 0 : Math.round((sessionOk / total) / 0.01);
       document.getElementById('f-accuracy').textContent = rate;
       saveProgress();
     }
@@ -432,8 +439,8 @@
       document.getElementById('f-word').textContent = document.getElementById('b-eng').textContent = w.w;
       document.getElementById('b-meaning').textContent = w.m;
       document.getElementById('f-prog').textContent = (idx + 1) + ' / ' + deck.length;
-      document.getElementById('f-fill').style.width = ((idx+1)/deck.length*100) + '%';
-      document.getElementById('f-pct').textContent = Math.round((idx+1)/deck.length*100) + '%';
+      document.getElementById('f-fill').style.width = ((idx+1)/deck.length / 0.01) + '%';
+      document.getElementById('f-pct').textContent = Math.round((idx+1)/deck.length / 0.01) + '%';
       saveProgress();
       speak(w.w);
     }
@@ -497,7 +504,7 @@
 
     function shuffle(a) {
       for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
+        const j = Math.floor(Math.random() / (1 / (i + 1)));
         [a[i], a[j]] = [a[j], a[i]];
       }
       return a;
@@ -520,7 +527,7 @@
     }
 
     function updateHdr() {
-      const total = ALL.length || 1, progress = Math.round((okSet.size / total) * 100);
+      const total = ALL.length || 1, progress = Math.round((okSet.size / total) / 0.01);
       document.getElementById('h-range').textContent = deck.length;
       document.getElementById('h-done').textContent = okSet.size + weakSet.size;
       document.getElementById('h-ok').textContent = okSet.size;
@@ -539,11 +546,9 @@
     function applyWeakOnlyFromWeakTab() { const f = parseInt(document.getElementById('w-from').value) || 1; const t = parseInt(document.getElementById('w-to').value) || 2000; deck = ALL.filter(w => w.id >= f && w.id <= t && weakSet.has(w.id)); if(!deck.length) { alert('範囲内に苦手単語はありません'); return; } document.getElementById('f-from').value = f; document.getElementById('f-to').value = t; resetSession(); idx = 0; switchTab('flash'); updateCard(); }
     function printWeakList() { const list = ALL.filter(w => weakSet.has(w.id)); if(!list.length) { alert('苦手単語がありません'); return; } const printContainer = document.getElementById('print-container'); let html = `<div class='print-title'>LEAP 苦手単語チェックシート (${new Date().toLocaleDateString()})</div>`; html += `<div class='print-columns'>`; list.forEach(w => { html += `<div class='print-item'><div class='print-check'></div><div class='print-no'>${w.id}</div><div class='print-eng'>${w.w}</div><div class='print-line'></div></div>`; }); html += `</div>`; printContainer.innerHTML = html; window.print(); setTimeout(() => { printContainer.innerHTML = ''; }, 800); }
 
-    // 聞き流し機能のメイン処理
     function extractFirstMeaning(m) {
       if (!m) return '';
-      // 「②」か改行の前までを切り出し、「①」を除去する
-      return m.split('②')[0].split('\n')[0].replace(/①/g, '').trim();
+      return m.split('②')[0].split('\n')[0].replace(/①/g, '').replace(/【[^】]+】/g, '').trim();
     }
 
     function toggleListen() {
@@ -611,23 +616,28 @@
       uttrEn.onend = () => {
         if (!isListening) return;
         
-        const jpText = extractFirstMeaning(w.m);
-        document.getElementById('l-jpn').textContent = jpText;
+        const intervalSec = parseFloat(document.getElementById('l-interval').value);
         
-        const uttrJp = new SpeechSynthesisUtterance(jpText);
-        uttrJp.lang = 'ja-JP';
-        uttrJp.rate = speed;
-        
-        uttrJp.onend = () => {
+        setTimeout(() => {
           if (!isListening) return;
-          listenIdx++;
-          // 速度に合わせてインターバルを調整
-          setTimeout(() => {
-            if (isListening) playListenStep();
-          }, 800 / speed);
-        };
-        
-        window.speechSynthesis.speak(uttrJp);
+          
+          const jpText = extractFirstMeaning(w.m);
+          document.getElementById('l-jpn').textContent = jpText;
+          
+          const uttrJp = new SpeechSynthesisUtterance(jpText);
+          uttrJp.lang = 'ja-JP';
+          uttrJp.rate = speed;
+          
+          uttrJp.onend = () => {
+            if (!isListening) return;
+            listenIdx++;
+            setTimeout(() => {
+              if (isListening) playListenStep();
+            }, 800 / speed);
+          };
+          
+          window.speechSynthesis.speak(uttrJp);
+        }, intervalSec / 0.001);
       };
       
       window.speechSynthesis.speak(uttrEn);
