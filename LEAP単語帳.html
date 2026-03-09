@@ -333,15 +333,13 @@
 
     shuffled = localStorage.getItem('leap_shuffled') === 'true';
 
-    let isListening = false, listenDeck = [], listenIdx = 0;
+    let isListening = false, listenDeck = [], listenIdx = 0, wakeLock = null;
 
-    // 品詞記号 [名] [動] などを取り除く共通関数
     function cleanText(t) {
       if (!t) return '';
       return t.replace(/\[[^\]]+\]/g, '').trim();
     }
 
-    // 聞き流し用の特殊抽出（①や【】もカット）
     function extractFirstMeaning(m) {
       if (!m) return '';
       return m.split('②')[0].split('\n')[0]
@@ -351,13 +349,33 @@
         .trim();
     }
 
+    // 基本的な読み上げ関数（単発用）
     function speak(text, lang = 'en-US', speed = 1.0, callback) {
       if (!text) return;
+      window.speechSynthesis.cancel();
       const uttr = new SpeechSynthesisUtterance(text);
       uttr.lang = lang;
       uttr.rate = speed;
       if (callback) uttr.onend = callback;
       window.speechSynthesis.speak(uttr);
+    }
+
+    // Wake Lockの取得（スリープ防止）
+    async function requestWakeLock() {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await navigator.wakeLock.request('screen');
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function releaseWakeLock() {
+      if (wakeLock !== null) {
+        wakeLock.release();
+        wakeLock = null;
+      }
     }
 
     function saveStatus() {
@@ -389,33 +407,22 @@
       reader.onload = (e) => {
         ALL = JSON.parse(e.target.result);
         document.getElementById('data-loader').style.display = 'none';
-        
         const savedFrom = localStorage.getItem('leap_range_from');
         const savedTo = localStorage.getItem('leap_range_to');
         if (savedFrom) document.getElementById('f-from').value = savedFrom;
         if (savedTo) document.getElementById('f-to').value = savedTo;
-
         const savedIdx = parseInt(localStorage.getItem('leap_current_idx') || '0');
         const savedDeckIds = JSON.parse(localStorage.getItem('leap_current_deck') || '[]');
-        
         updateShuffleBtnUI();
-        
         if (savedDeckIds.length > 0) {
           const restoredDeck = savedDeckIds.map(id => ALL.find(w => w.id === id)).filter(Boolean);
           const f = parseInt(document.getElementById('f-from').value) || 1;
           const t = parseInt(document.getElementById('f-to').value) || 2000;
           if (restoredDeck.every(w => w.id >= f && w.id <= t) && restoredDeck.length > 0) {
-            deck = restoredDeck;
-            idx = savedIdx;
-          } else {
-            applyRange(0);
-          }
-        } else {
-          applyRange(0);
-        }
-        updateAccuracy();
-        updateCard();
-        updateHdr();
+            deck = restoredDeck; idx = savedIdx;
+          } else { applyRange(0); }
+        } else { applyRange(0); }
+        updateAccuracy(); updateCard(); updateHdr();
       };
       reader.readAsText(event.target.files[0]);
     }
@@ -429,8 +436,7 @@
       if (shuffled) shuffle(deck);
       idx = startIdx;
       if (startIdx === 0) resetSession();
-      updateAccuracy();
-      updateCard();
+      updateAccuracy(); updateCard();
     }
 
     function resetSession() { sessionOk = 0; sessionNg = 0; updateAccuracy(); }
@@ -447,12 +453,11 @@
       const w = deck[idx];
       document.getElementById('f-num').textContent = document.getElementById('b-num').textContent = 'No. ' + w.id;
       document.getElementById('f-word').textContent = document.getElementById('b-eng').textContent = w.w;
-      document.getElementById('b-meaning').textContent = cleanText(w.m); // 品詞カット
+      document.getElementById('b-meaning').textContent = cleanText(w.m);
       document.getElementById('f-prog').textContent = (idx + 1) + ' / ' + deck.length;
       document.getElementById('f-fill').style.width = ((idx+1)/deck.length / 0.01) + '%';
       document.getElementById('f-pct').textContent = Math.round((idx+1)/deck.length / 0.01) + '%';
       saveProgress();
-      window.speechSynthesis.cancel();
       speak(w.w);
     }
 
@@ -464,18 +469,14 @@
       const w = deck[idx];
       if (ok) { okSet.add(w.id); weakSet.delete(w.id); sessionOk++; }
       else { weakSet.add(w.id); okSet.delete(w.id); sessionNg++; }
-      saveStatus();
-      updateAccuracy();
-      
+      saveStatus(); updateAccuracy();
       const inner = document.getElementById('card-inner');
       if (!inner.classList.contains('flip')) inner.classList.add('flip');
-      
       setTimeout(() => {
         inner.classList.remove('flip');
         setTimeout(() => {
           idx = (idx + 1) % deck.length;
-          updateCard();
-          isAnimating = false;
+          updateCard(); isAnimating = false;
         }, 350); 
       }, 1000);
     }
@@ -539,7 +540,7 @@
       choices.forEach(c => { 
         const div = document.createElement('div'); 
         div.className = 'opt'; 
-        div.textContent = cleanText(c.m); // クイズ選択肢の品詞カット
+        div.textContent = cleanText(c.m); 
         div.onclick = () => { 
           if (div.classList.contains('correct') || div.classList.contains('wrong')) return; 
           if (c.id === correct.id) { 
@@ -611,10 +612,7 @@
       if(!deck.length) { alert('範囲内に苦手単語はありません'); return; } 
       document.getElementById('f-from').value = f; 
       document.getElementById('f-to').value = t; 
-      resetSession(); 
-      idx = 0; 
-      switchTab('flash'); 
-      updateCard(); 
+      resetSession(); idx = 0; switchTab('flash'); updateCard(); 
     }
 
     function printWeakList() { 
@@ -624,17 +622,21 @@
       let html = `<div class='print-title'>LEAP 苦手単語チェックシート (${new Date().toLocaleDateString()})</div><div class='print-columns'>`; 
       list.forEach(w => { html += `<div class='print-item'><div class='print-check'></div><div class='print-no'>${w.id}</div><div class='print-eng'>${w.w}</div><div class='print-line'></div></div>`; }); 
       html += `</div>`; 
-      printContainer.innerHTML = html; 
-      window.print(); 
+      printContainer.innerHTML = html; window.print(); 
       setTimeout(() => { printContainer.innerHTML = ''; }, 800); 
     }
 
+    // --- 聞き流し機能（ラグ対策 & バックグラウンド対応版） ---
     function toggleListen() {
+      const btn = document.getElementById('btn-listen-play');
       if (isListening) {
-        window.speechSynthesis.pause();
+        // 一時停止ではなく「位置を保持して完全停止」させる
         isListening = false;
-        document.getElementById('btn-listen-play').textContent = '▶ 再開';
+        window.speechSynthesis.cancel();
+        releaseWakeLock();
+        btn.textContent = '▶ 再開';
       } else {
+        // 再生開始
         if (listenIdx === 0 || !listenDeck.length) {
           const f = parseInt(document.getElementById('l-from').value) || 1;
           const t = parseInt(document.getElementById('l-to').value) || 2000;
@@ -644,17 +646,20 @@
           listenIdx = 0;
         }
         isListening = true;
-        document.getElementById('btn-listen-play').textContent = '⏸ 一時停止';
-        window.speechSynthesis.resume();
-        if(!window.speechSynthesis.speaking) playListenStep();
+        btn.textContent = '⏸ 一時停止';
+        requestWakeLock();
+        playListenStep();
       }
     }
 
     function stopListen() {
       isListening = false; listenIdx = 0; listenDeck = [];
       window.speechSynthesis.cancel();
+      releaseWakeLock();
       document.getElementById('btn-listen-play').textContent = '▶ 再生';
-      document.getElementById('l-num').textContent = '—'; document.getElementById('l-eng').textContent = '—'; document.getElementById('l-jpn').textContent = '—';
+      document.getElementById('l-num').textContent = '—'; 
+      document.getElementById('l-eng').textContent = '—'; 
+      document.getElementById('l-jpn').textContent = '—';
     }
 
     function playListenStep() {
@@ -670,19 +675,39 @@
       document.getElementById('l-jpn').textContent = '...';
 
       // 英語の読み上げ
-      speak(w.w, 'en-US', speed, () => {
+      const uttrEn = new SpeechSynthesisUtterance(w.w);
+      uttrEn.lang = 'en-US';
+      uttrEn.rate = speed;
+      
+      uttrEn.onend = () => {
+        if (!isListening) return;
+        
+        // 単語間の待ち時間をsetTimeoutで管理
         setTimeout(() => {
           if (!isListening) return;
-          const jpText = extractFirstMeaning(w.m); // 品詞なしの第一義
+          
+          const jpText = extractFirstMeaning(w.m);
           document.getElementById('l-jpn').textContent = jpText;
           
-          // 日本語の読み上げ
-          speak(jpText, 'ja-JP', speed, () => {
+          const uttrJp = new SpeechSynthesisUtterance(jpText);
+          uttrJp.lang = 'ja-JP';
+          uttrJp.rate = speed;
+          
+          uttrJp.onend = () => {
+            if (!isListening) return;
             listenIdx++;
-            setTimeout(() => { if (isListening) playListenStep(); }, 800 / speed);
-          });
+            // 次の単語へ行く前の短い休憩。ここもsetTimeout。
+            setTimeout(() => {
+              if (isListening) playListenStep();
+            }, 600 / speed);
+          };
+          
+          window.speechSynthesis.speak(uttrJp);
         }, intervalSec * 1000);
-      });
+      };
+      
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(uttrEn);
     }
 
     document.addEventListener('DOMContentLoaded', () => {
