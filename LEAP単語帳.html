@@ -175,7 +175,7 @@
 </head>
 <body>
   <div id='print-container'></div>
-  <button class='scroll-btn' onclick='window.scrollTo({top:0,behavior:`smooth`})'>↑</button>
+  <button class='scroll-btn' onclick='window.scrollTo({top:0,behavior:`smooth` })'>↑</button>
 
   <div id='data-loader' style='padding:20px;background:var(--s2);text-align:center;border-bottom:1px solid var(--border);'>
     <label style='background:var(--accent);color:#fff;padding:10px 20px;border-radius:var(--r);cursor:pointer;font-weight:bold;display:inline-block;'>
@@ -271,14 +271,14 @@
     <div id='pane-weak' class='hidden'>
       <div class='toolbar' style='justify-content: center; background: var(--s2); padding: 15px; border-radius: var(--r); margin-bottom: 20px;'>
         <div class='range-row'>
-          No.<input type='number' id='w-from' class='tbinput' value='1'>〜<input type='number' id='w-to' class='tbinput' value='100'>
+          No.<input type='number' id='w-from' class='tbinput' value='1' oninput='renderWeak()'>〜<input type='number' id='w-to' class='tbinput' value='100' oninput='renderWeak()'>
           <button class='btn-go' onclick='applyWeakOnlyFromWeakTab()'>苦手フラッシュ開始</button>
         </div>
       </div>
       <div style='text-align: center; margin-bottom: 20px;'>
-        <button class='tbbtn' style='background: var(--red); color: #fff; border: none; padding: 12px 24px; font-weight: bold; border-radius: 10px; cursor: pointer;' onclick='printWeakList()'>⚠️ 苦手リストを3列PDFで印刷</button>
+        <button class='tbbtn' style='background: var(--red); color: #fff; border: none; padding: 12px 24px; font-weight: bold; border-radius: 10px; cursor: pointer;' onclick='printWeakList()'>⚠️ 範囲内の苦手リストを印刷</button>
       </div>
-      <div id='weak-empty' style='text-align:center;padding:40px;color:var(--muted)'>苦手単語はありません</div>
+      <div id='weak-empty' style='text-align:center;padding:40px;color:var(--muted)'>該当する苦手単語はありません</div>
       <div class='wlist' id='weak-list'></div>
     </div>
 
@@ -337,19 +337,18 @@
 
     function cleanText(t) {
       if (!t) return '';
-      return t.replace(/\[[^\]]+\]/g, '').trim();
+      return t.replace(/[\[][^\]]+[\]]/g, '').trim();
     }
 
     function extractFirstMeaning(m) {
       if (!m) return '';
       return m.split('②')[0].split('\n')[0]
         .replace(/①/g, '')
-        .replace(/【[^】]+】/g, '')
-        .replace(/\[[^\]]+\]/g, '')
+        .replace(/[【][^】]+[】]/g, '')
+        .replace(/[\[][^\]]+[\]]/g, '')
         .trim();
     }
 
-    // 基本的な読み上げ関数（単発用）
     function speak(text, lang = 'en-US', speed = 1.0, callback) {
       if (!text) return;
       window.speechSynthesis.cancel();
@@ -360,7 +359,6 @@
       window.speechSynthesis.speak(uttr);
     }
 
-    // Wake Lockの取得（スリープ防止）
     async function requestWakeLock() {
       try {
         if ('wakeLock' in navigator) {
@@ -493,7 +491,7 @@
 
     function shuffle(a) {
       for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
+        const j = Math.floor(Math.random() / (1 / (i + 1)));
         [a[i], a[j]] = [a[j], a[i]];
       }
       return a;
@@ -592,9 +590,11 @@
     }
 
     function renderWeak() { 
+      const f = parseInt(document.getElementById('w-from').value) || 1; 
+      const t = parseInt(document.getElementById('w-to').value) || 2000; 
       const el = document.getElementById('weak-list'); 
       el.innerHTML = ''; 
-      const list = ALL.filter(w => weakSet.has(w.id)); 
+      const list = ALL.filter(w => weakSet.has(w.id) && w.id >= f && w.id <= t); 
       document.getElementById('weak-empty').classList.toggle('hidden', list.length > 0); 
       list.forEach(w => { 
         const row = document.createElement('div'); 
@@ -616,27 +616,26 @@
     }
 
     function printWeakList() { 
-      const list = ALL.filter(w => weakSet.has(w.id)); 
-      if(!list.length) { alert('苦手単語がありません'); return; } 
+      const f = parseInt(document.getElementById('w-from').value) || 1; 
+      const t = parseInt(document.getElementById('w-to').value) || 2000; 
+      const list = ALL.filter(w => weakSet.has(w.id) && w.id >= f && w.id <= t); 
+      if(!list.length) { alert('印刷対象の単語がありません'); return; } 
       const printContainer = document.getElementById('print-container'); 
-      let html = `<div class='print-title'>LEAP 苦手単語チェックシート (${new Date().toLocaleDateString()})</div><div class='print-columns'>`; 
+      let html = `<div class='print-title'>LEAP 苦手単語チェックシート (No.${f}〜${t})</div><div class='print-columns'>`; 
       list.forEach(w => { html += `<div class='print-item'><div class='print-check'></div><div class='print-no'>${w.id}</div><div class='print-eng'>${w.w}</div><div class='print-line'></div></div>`; }); 
       html += `</div>`; 
       printContainer.innerHTML = html; window.print(); 
       setTimeout(() => { printContainer.innerHTML = ''; }, 800); 
     }
 
-    // --- 聞き流し機能（ラグ対策 & バックグラウンド対応版） ---
     function toggleListen() {
       const btn = document.getElementById('btn-listen-play');
       if (isListening) {
-        // 一時停止ではなく「位置を保持して完全停止」させる
         isListening = false;
         window.speechSynthesis.cancel();
         releaseWakeLock();
         btn.textContent = '▶ 再開';
       } else {
-        // 再生開始
         if (listenIdx === 0 || !listenDeck.length) {
           const f = parseInt(document.getElementById('l-from').value) || 1;
           const t = parseInt(document.getElementById('l-to').value) || 2000;
@@ -674,36 +673,28 @@
       document.getElementById('l-eng').textContent = w.w;
       document.getElementById('l-jpn').textContent = '...';
 
-      // 英語の読み上げ
       const uttrEn = new SpeechSynthesisUtterance(w.w);
       uttrEn.lang = 'en-US';
       uttrEn.rate = speed;
       
       uttrEn.onend = () => {
         if (!isListening) return;
-        
-        // 単語間の待ち時間をsetTimeoutで管理
         setTimeout(() => {
           if (!isListening) return;
-          
           const jpText = extractFirstMeaning(w.m);
           document.getElementById('l-jpn').textContent = jpText;
-          
           const uttrJp = new SpeechSynthesisUtterance(jpText);
           uttrJp.lang = 'ja-JP';
           uttrJp.rate = speed;
-          
           uttrJp.onend = () => {
             if (!isListening) return;
             listenIdx++;
-            // 次の単語へ行く前の短い休憩。ここもsetTimeout。
             setTimeout(() => {
               if (isListening) playListenStep();
             }, 600 / speed);
           };
-          
           window.speechSynthesis.speak(uttrJp);
-        }, intervalSec * 1000);
+        }, intervalSec / 0.001);
       };
       
       window.speechSynthesis.cancel();
@@ -715,4 +706,4 @@
     });
   </script>
 </body>
-</html>
+  </html>
