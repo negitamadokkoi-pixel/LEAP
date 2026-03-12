@@ -175,7 +175,7 @@
 </head>
 <body>
   <div id='print-container'></div>
-  <button class='scroll-btn' onclick='window.scrollTo({top:0,behavior:`smooth` })'>↑</button>
+  <button class='scroll-btn' onclick='window.scrollTo({top:0,behavior:"smooth"})'>↑</button>
 
   <div id='data-loader' style='padding:20px;background:var(--s2);text-align:center;border-bottom:1px solid var(--border);'>
     <label style='background:var(--accent);color:#fff;padding:10px 20px;border-radius:var(--r);cursor:pointer;font-weight:bold;display:inline-block;'>
@@ -192,7 +192,7 @@
           <circle cx='18' cy='18' r='16' fill='none' stroke='var(--border)' stroke-width='3.5'></circle>
           <circle id='chart-fill' cx='18' cy='18' r='16' fill='none' stroke='var(--green)' stroke-width='3.5' stroke-dasharray='0 100' stroke-linecap='round'></circle>
         </svg>
-        <div id='chart-text' style='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:`Bebas Neue`;'>0%</div>
+        <div id='chart-text' style='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:"Bebas Neue";'>0%</div>
       </div>
       <div class='hstat'><strong id='h-range'>0</strong>範囲</div>
       <div class='hstat'><strong id='h-done'>0</strong>完了</div>
@@ -201,11 +201,11 @@
   </header>
 
   <div class='tabs'>
-    <div class='tab active' onclick='switchTab(`flash`)'>📇 フラッシュ</div>
-    <div class='tab' onclick='switchTab(`quiz`)'>🎯 クイズ</div>
-    <div class='tab' onclick='switchTab(`list`)'>📋 一覧</div>
-    <div class='tab' onclick='switchTab(`weak`)'>⚠️ 苦手</div>
-    <div class='tab' onclick='switchTab(`listen`)'>🎧 聞き流し</div>
+    <div class='tab active' onclick='switchTab("flash")'>📇 フラッシュ</div>
+    <div class='tab' onclick='switchTab("quiz")'>🎯 クイズ</div>
+    <div class='tab' onclick='switchTab("list")'>📋 一覧</div>
+    <div class='tab' onclick='switchTab("weak")'>⚠️ 苦手</div>
+    <div class='tab' onclick='switchTab("listen")'>🎧 聞き流し</div>
   </div>
 
   <main>
@@ -262,7 +262,7 @@
 
     <div id='pane-list' class='hidden'>
       <div class='jump-box'>
-        <input class='jump-input' type='text' id='search' placeholder='検索 (スペースでOR検索) / 番号入力でGo' onkeydown='if(event.key===`Enter`)jumpToId()'>
+        <input class='jump-input' type='text' id='search' placeholder='検索 (スペースでOR検索) / 番号入力でGo' onkeydown='if(event.key==="Enter")jumpToId()'>
         <button class='btn-go' onclick='jumpToId()'>Go</button>
       </div>
       <div class='wlist' id='wlist'></div>
@@ -316,7 +316,7 @@
       </div>
       <div class='qcard' style='min-height:220px; display:flex; flex-direction:column; justify-content:center;'>
         <div class='face-num' id='l-num'>—</div>
-        <div class='face-eng' id='l-eng' style='font-size:2.8rem; margin:15px 0; color:var(--accent); font-family:`Bebas Neue`, sans-serif;'>—</div>
+        <div class='face-eng' id='l-eng' style='font-size:2.8rem; margin:15px 0; color:var(--accent); font-family:"Bebas Neue", sans-serif;'>—</div>
         <div id='l-jpn' style='font-size:1.2rem; color:var(--text); min-height:2em;'>—</div>
       </div>
     </div>
@@ -324,31 +324,42 @@
   </main>
 
   <script>
+    // ─── State ───────────────────────────────────────────────
     let ALL = [], deck = [], idx = 0, shuffled = false, isAnimating = false;
-    let weakSet = new Set(JSON.parse(localStorage.getItem('leap_weak') || '[]'));
-    let okSet = new Set(JSON.parse(localStorage.getItem('leap_ok') || '[]'));
-    
-    let sessionOk = parseInt(localStorage.getItem('leap_session_ok') || '0');
-    let sessionNg = parseInt(localStorage.getItem('leap_session_ng') || '0');
 
+    // ファイル名をキーに含めて複数単語帳を混在させない
+    let currentFileName = '';
+    function storageKey(k) { return 'leap_' + currentFileName + '_' + k; }
+
+    function loadSets() {
+      weakSet = new Set(JSON.parse(localStorage.getItem(storageKey('weak')) || '[]'));
+      okSet   = new Set(JSON.parse(localStorage.getItem(storageKey('ok'))   || '[]'));
+    }
+
+    let weakSet = new Set();
+    let okSet   = new Set();
+
+    let sessionOk = 0, sessionNg = 0;
     shuffled = localStorage.getItem('leap_shuffled') === 'true';
 
     let isListening = false, listenDeck = [], listenIdx = 0, wakeLock = null;
 
+    // ─── Text helpers ─────────────────────────────────────────
     function cleanText(t) {
       if (!t) return '';
-      return t.replace(/[\[][^\]]+[\]]/g, '').trim();
+      return t.replace(/\[[^\]]+\]/g, '').trim();
     }
 
     function extractFirstMeaning(m) {
       if (!m) return '';
       return m.split('②')[0].split('\n')[0]
         .replace(/①/g, '')
-        .replace(/[【][^】]+[】]/g, '')
-        .replace(/[\[][^\]]+[\]]/g, '')
+        .replace(/【[^】]+】/g, '')
+        .replace(/\[[^\]]+\]/g, '')
         .trim();
     }
 
+    // ─── Speech ───────────────────────────────────────────────
     function speak(text, lang = 'en-US', speed = 1.0, callback) {
       if (!text) return;
       window.speechSynthesis.cancel();
@@ -359,77 +370,97 @@
       window.speechSynthesis.speak(uttr);
     }
 
+    // ─── Wake Lock ────────────────────────────────────────────
     async function requestWakeLock() {
       try {
-        if ('wakeLock' in navigator) {
-          wakeLock = await navigator.wakeLock.request('screen');
-        }
-      } catch (err) {
-        console.error(err);
-      }
+        if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+      } catch (err) { console.warn('WakeLock:', err); }
     }
 
     function releaseWakeLock() {
-      if (wakeLock !== null) {
-        wakeLock.release();
-        wakeLock = null;
-      }
+      if (wakeLock !== null) { wakeLock.release(); wakeLock = null; }
     }
 
+    // ─── Persistence ──────────────────────────────────────────
     function saveStatus() {
-      localStorage.setItem('leap_weak', JSON.stringify([...weakSet]));
-      localStorage.setItem('leap_ok', JSON.stringify([...okSet]));
+      localStorage.setItem(storageKey('weak'), JSON.stringify([...weakSet]));
+      localStorage.setItem(storageKey('ok'),   JSON.stringify([...okSet]));
       updateHdr();
     }
 
     function saveProgress() {
-      localStorage.setItem('leap_current_idx', idx);
-      localStorage.setItem('leap_session_ok', sessionOk);
-      localStorage.setItem('leap_session_ng', sessionNg);
-      localStorage.setItem('leap_range_from', document.getElementById('f-from').value);
-      localStorage.setItem('leap_range_to', document.getElementById('f-to').value);
-      localStorage.setItem('leap_shuffled', shuffled);
-      localStorage.setItem('leap_current_deck', JSON.stringify(deck.map(w => w.id)));
+      localStorage.setItem('leap_current_idx',    idx);
+      localStorage.setItem('leap_session_ok',     sessionOk);
+      localStorage.setItem('leap_session_ng',     sessionNg);
+      localStorage.setItem('leap_range_from',     document.getElementById('f-from').value);
+      localStorage.setItem('leap_range_to',       document.getElementById('f-to').value);
+      localStorage.setItem('leap_shuffled',       shuffled);
+      localStorage.setItem('leap_current_deck',   JSON.stringify(deck.map(w => w.id)));
+      localStorage.setItem('leap_current_file',   currentFileName);
     }
 
+    // ─── Status badge cycle ───────────────────────────────────
     function changeStatus(id, event) {
-      if(event) event.stopPropagation();
-      if (okSet.has(id)) { okSet.delete(id); weakSet.add(id); }
+      if (event) event.stopPropagation();
+      if (okSet.has(id))   { okSet.delete(id);   weakSet.add(id); }
       else if (weakSet.has(id)) { weakSet.delete(id); }
-      else { okSet.add(id); }
+      else                 { okSet.add(id); }
       saveStatus(); renderList(); renderWeak();
     }
 
+    // ─── Load JSON ────────────────────────────────────────────
     function loadData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      currentFileName = file.name.replace(/[^a-zA-Z0-9]/g, '_');
       const reader = new FileReader();
       reader.onload = (e) => {
         ALL = JSON.parse(e.target.result);
         document.getElementById('data-loader').style.display = 'none';
+
+        loadSets();
+
         const savedFrom = localStorage.getItem('leap_range_from');
-        const savedTo = localStorage.getItem('leap_range_to');
-        if (savedFrom) document.getElementById('f-from').value = savedFrom;
-        if (savedTo) document.getElementById('f-to').value = savedTo;
-        const savedIdx = parseInt(localStorage.getItem('leap_current_idx') || '0');
+        const savedTo   = localStorage.getItem('leap_range_to');
+        // 同じファイルの保存データのみ復元
+        const savedFile = localStorage.getItem('leap_current_file');
+        if (savedFrom && savedFile === currentFileName) {
+          document.getElementById('f-from').value = savedFrom;
+          document.getElementById('f-to').value   = savedTo;
+        }
+
+        const savedIdx     = parseInt(localStorage.getItem('leap_current_idx') || '0');
         const savedDeckIds = JSON.parse(localStorage.getItem('leap_current_deck') || '[]');
+
         updateShuffleBtnUI();
-        if (savedDeckIds.length > 0) {
-          const restoredDeck = savedDeckIds.map(id => ALL.find(w => w.id === id)).filter(Boolean);
+
+        if (savedDeckIds.length > 0 && savedFile === currentFileName) {
           const f = parseInt(document.getElementById('f-from').value) || 1;
-          const t = parseInt(document.getElementById('f-to').value) || 2000;
-          if (restoredDeck.every(w => w.id >= f && w.id <= t) && restoredDeck.length > 0) {
-            deck = restoredDeck; idx = savedIdx;
-          } else { applyRange(0); }
-        } else { applyRange(0); }
+          const t = parseInt(document.getElementById('f-to').value)   || 2000;
+          const restoredDeck = savedDeckIds.map(id => ALL.find(w => w.id === id)).filter(Boolean);
+          if (restoredDeck.length > 0 && restoredDeck.every(w => w.id >= f && w.id <= t)) {
+            deck = restoredDeck;
+            idx  = Math.min(savedIdx, deck.length - 1);
+            sessionOk = parseInt(localStorage.getItem('leap_session_ok') || '0');
+            sessionNg = parseInt(localStorage.getItem('leap_session_ng') || '0');
+          } else {
+            applyRange(0);
+          }
+        } else {
+          applyRange(0);
+        }
+
         updateAccuracy(); updateCard(); updateHdr();
       };
-      reader.readAsText(event.target.files[0]);
+      reader.readAsText(file);
     }
 
+    // ─── Flash range ──────────────────────────────────────────
     function applyRangeByButton() { applyRange(0); }
 
     function applyRange(startIdx = 0) {
       const f = parseInt(document.getElementById('f-from').value) || 1;
-      const t = parseInt(document.getElementById('f-to').value) || 2000;
+      const t = parseInt(document.getElementById('f-to').value)   || 2000;
       deck = ALL.filter(w => w.id >= f && w.id <= t);
       if (shuffled) shuffle(deck);
       idx = startIdx;
@@ -441,7 +472,7 @@
 
     function updateAccuracy() {
       const total = sessionOk + sessionNg;
-      const rate = total === 0 ? 0 : Math.round((sessionOk / total) / 0.01);
+      const rate  = total === 0 ? 0 : Math.round(sessionOk / total * 100);
       document.getElementById('f-accuracy').textContent = rate;
       saveProgress();
     }
@@ -453,20 +484,22 @@
       document.getElementById('f-word').textContent = document.getElementById('b-eng').textContent = w.w;
       document.getElementById('b-meaning').textContent = cleanText(w.m);
       document.getElementById('f-prog').textContent = (idx + 1) + ' / ' + deck.length;
-      document.getElementById('f-fill').style.width = ((idx+1)/deck.length / 0.01) + '%';
-      document.getElementById('f-pct').textContent = Math.round((idx+1)/deck.length / 0.01) + '%';
+      document.getElementById('f-fill').style.width = ((idx + 1) / deck.length * 100) + '%';
+      document.getElementById('f-pct').textContent  = Math.round((idx + 1) / deck.length * 100) + '%';
       saveProgress();
       speak(w.w);
     }
 
-    function flipCard() { if(!isAnimating) document.getElementById('card-inner').classList.toggle('flip'); }
+    function flipCard() {
+      if (!isAnimating) document.getElementById('card-inner').classList.toggle('flip');
+    }
 
     function vote(ok) {
       if (isAnimating || !deck.length) return;
       isAnimating = true;
       const w = deck[idx];
       if (ok) { okSet.add(w.id); weakSet.delete(w.id); sessionOk++; }
-      else { weakSet.add(w.id); okSet.delete(w.id); sessionNg++; }
+      else     { weakSet.add(w.id); okSet.delete(w.id); sessionNg++; }
       saveStatus(); updateAccuracy();
       const inner = document.getElementById('card-inner');
       if (!inner.classList.contains('flip')) inner.classList.add('flip');
@@ -475,159 +508,190 @@
         setTimeout(() => {
           idx = (idx + 1) % deck.length;
           updateCard(); isAnimating = false;
-        }, 350); 
+        }, 350);
       }, 1000);
     }
 
-    function go(d) { if(!isAnimating && deck.length) { document.getElementById('card-inner').classList.remove('flip'); idx = (idx + d + deck.length) % deck.length; updateCard(); } }
+    function go(d) {
+      if (!isAnimating && deck.length) {
+        document.getElementById('card-inner').classList.remove('flip');
+        idx = (idx + d + deck.length) % deck.length;
+        updateCard();
+      }
+    }
 
+    // ─── Shuffle ──────────────────────────────────────────────
     function updateShuffleBtnUI() {
       const btn = document.getElementById('shuf-btn');
       btn.style.background = shuffled ? 'var(--accent)' : 'var(--s2)';
-      btn.style.color = shuffled ? '#fff' : 'var(--muted)';
+      btn.style.color       = shuffled ? '#fff'          : 'var(--muted)';
     }
 
     function toggleShuffle() { shuffled = !shuffled; updateShuffleBtnUI(); applyRange(0); }
 
+    // FIX: 元のコードは Math.floor(Math.random() / (1 / (i+1))) で
+    //      j === i+1 になり得るバグがあったため修正
     function shuffle(a) {
       for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() / (1 / (i + 1)));
+        const j = Math.floor(Math.random() * (i + 1));
         [a[i], a[j]] = [a[j], a[i]];
       }
       return a;
     }
 
+    // ─── Tab switch ───────────────────────────────────────────
     function switchTab(t) {
-      if(isListening) stopListen();
+      if (isListening) stopListen();
       window.speechSynthesis.cancel();
       ['flash', 'quiz', 'list', 'weak', 'listen'].forEach(x => {
-        const pane = document.getElementById('pane-' + x);
-        if (pane) pane.classList.toggle('hidden', x !== t);
-        document.querySelectorAll('.tab').forEach(tab => {
-          const tText = x === 'flash' ? 'フラッシュ' : x === 'quiz' ? 'クイズ' : x === 'list' ? '一覧' : x === 'weak' ? '苦手' : '聞き流し';
-          if(tab.textContent.includes(tText)) tab.classList.toggle('active', x === t);
-        });
+        document.getElementById('pane-' + x).classList.toggle('hidden', x !== t);
       });
-      if(t === 'weak') renderWeak(); 
-      if(t === 'list') renderList();
+      document.querySelectorAll('.tab').forEach((tab, i) => {
+        tab.classList.toggle('active', ['flash','quiz','list','weak','listen'][i] === t);
+      });
+      if (t === 'weak') renderWeak();
+      if (t === 'list') renderList();
     }
 
+    // ─── Header stats ─────────────────────────────────────────
     function updateHdr() {
-      const total = ALL.length || 1, progress = Math.round((okSet.size / total) / 0.01);
+      const total    = ALL.length || 1;
+      const progress = Math.round(okSet.size / total * 100);
       document.getElementById('h-range').textContent = deck.length;
-      document.getElementById('h-done').textContent = okSet.size + weakSet.size;
-      document.getElementById('h-ok').textContent = okSet.size;
+      document.getElementById('h-done').textContent  = okSet.size + weakSet.size;
+      document.getElementById('h-ok').textContent    = okSet.size;
       const fill = document.getElementById('chart-fill');
-      if (fill) fill.setAttribute('stroke-dasharray', `${progress} 100`);
+      if (fill) fill.setAttribute('stroke-dasharray', progress + ' 100');
       const txt = document.getElementById('chart-text');
       if (txt) txt.textContent = progress + '%';
     }
 
+    // ─── Quiz ─────────────────────────────────────────────────
     let qDeck = [], qIdx = 0;
-    function applyQuizRange() { const f = parseInt(document.getElementById('q-from').value) || 1; const t = parseInt(document.getElementById('q-to').value) || 2000; qDeck = ALL.filter(w => w.id >= f && w.id <= t); startQuiz(); }
+
+    function applyQuizRange() {
+      const f = parseInt(document.getElementById('q-from').value) || 1;
+      const t = parseInt(document.getElementById('q-to').value)   || 2000;
+      qDeck = ALL.filter(w => w.id >= f && w.id <= t);
+      startQuiz();
+    }
+
     function startQuiz() { shuffle(qDeck); qIdx = 0; nextQuestion(); }
-    function nextQuestion() { 
-      if (qIdx >= qDeck.length) { alert('終了'); return; } 
-      const correct = qDeck[qIdx]; 
-      const choices = [correct, ...shuffle([...ALL.filter(w => w.id !== correct.id)]).slice(0, 3)]; 
-      shuffle(choices); 
-      document.getElementById('q-word').textContent = correct.w; 
-      speak(correct.w); 
-      const optContainer = document.getElementById('q-opts'); 
-      optContainer.innerHTML = ''; 
-      choices.forEach(c => { 
-        const div = document.createElement('div'); 
-        div.className = 'opt'; 
-        div.textContent = cleanText(c.m); 
-        div.onclick = () => { 
-          if (div.classList.contains('correct') || div.classList.contains('wrong')) return; 
-          if (c.id === correct.id) { 
-            div.classList.add('correct'); okSet.add(correct.id); weakSet.delete(correct.id); saveStatus(); 
-            setTimeout(() => { qIdx++; nextQuestion(); }, 600); 
-          } else { 
-            div.classList.add('wrong'); weakSet.add(correct.id); okSet.delete(correct.id); saveStatus(); 
-          } 
-        }; 
-        optContainer.appendChild(div); 
-      }); 
+
+    function nextQuestion() {
+      if (qIdx >= qDeck.length) { alert('終了'); return; }
+      const correct = qDeck[qIdx];
+      const pool    = ALL.filter(w => w.id !== correct.id);
+      const choices = shuffle([correct, ...shuffle(pool).slice(0, 3)]);
+      document.getElementById('q-word').textContent = correct.w;
+      speak(correct.w);
+      const optContainer = document.getElementById('q-opts');
+      optContainer.innerHTML = '';
+      choices.forEach(c => {
+        const div = document.createElement('div');
+        div.className  = 'opt';
+        div.textContent = cleanText(c.m);
+        div.onclick = () => {
+          if (div.classList.contains('correct') || div.classList.contains('wrong')) return;
+          if (c.id === correct.id) {
+            div.classList.add('correct');
+            okSet.add(correct.id); weakSet.delete(correct.id); saveStatus();
+            setTimeout(() => { qIdx++; nextQuestion(); }, 600);
+          } else {
+            div.classList.add('wrong');
+            weakSet.add(correct.id); okSet.delete(correct.id); saveStatus();
+          }
+        };
+        optContainer.appendChild(div);
+      });
     }
 
-    function renderList() { 
-      const searchInput = document.getElementById('search').value.trim(); 
-      const el = document.getElementById('wlist'); 
-      el.innerHTML = ''; 
-      const keywords = searchInput.toLowerCase().split(/[\s　]+/).filter(k => k.length > 0); 
-      const filtered = ALL.filter(w => { 
-        if (keywords.length === 0) return true; 
-        const textKeywords = keywords.filter(k => isNaN(k)); 
-        if (textKeywords.length === 0) return true; 
-        return textKeywords.every(q => w.w.toLowerCase().includes(q) || w.m.includes(q)); 
-      }); 
-      filtered.forEach(w => { 
-        const isW = weakSet.has(w.id), isO = okSet.has(w.id); 
-        const row = document.createElement('div'); 
-        row.className = 'wrow' + (isW ? ' weak' : isO ? ' ok' : ''); 
-        row.id = 'word-row-' + w.id; 
-        let label = '未着手', bCls = 'wbadge'; 
-        if (isW) { label = '苦手'; bCls += ' weak'; } else if (isO) { label = '覚えた'; bCls += ' ok'; } 
-        row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${cleanText(w.m)}</span><button class='${bCls}' onclick='changeStatus(${w.id}, event)'>${label}</button>`; 
-        row.onclick = () => speak(w.w); 
-        el.appendChild(row); 
-      }); 
+    // ─── List ─────────────────────────────────────────────────
+    function renderList() {
+      const searchInput = document.getElementById('search').value.trim();
+      const el = document.getElementById('wlist');
+      el.innerHTML = '';
+      const keywords = searchInput.toLowerCase().split(/[\s　]+/).filter(k => k.length > 0);
+      const filtered = ALL.filter(w => {
+        if (keywords.length === 0) return true;
+        const textKeywords = keywords.filter(k => isNaN(k));
+        if (textKeywords.length === 0) return true;
+        return textKeywords.every(q => w.w.toLowerCase().includes(q) || w.m.includes(q));
+      });
+      filtered.forEach(w => {
+        const isW = weakSet.has(w.id), isO = okSet.has(w.id);
+        const row  = document.createElement('div');
+        row.className = 'wrow' + (isW ? ' weak' : isO ? ' ok' : '');
+        row.id = 'word-row-' + w.id;
+        let label = '未着手', bCls = 'wbadge';
+        if (isW) { label = '苦手'; bCls += ' weak'; } else if (isO) { label = '覚えた'; bCls += ' ok'; }
+        row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${cleanText(w.m)}</span><button class='${bCls}' onclick='changeStatus(${w.id}, event)'>${label}</button>`;
+        row.onclick = () => speak(w.w);
+        el.appendChild(row);
+      });
     }
 
-    function jumpToId() { 
-      const input = document.getElementById('search').value.trim(); 
-      const keywords = input.split(/[\s　]+/); 
-      const jumpId = keywords.find(k => !isNaN(k) && k !== ''); 
-      if (jumpId) { 
-        const target = document.getElementById('word-row-' + jumpId); 
-        if (target) { 
-          target.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
-          target.classList.remove('jump-target'); void target.offsetWidth; target.classList.add('jump-target'); 
-        } else { alert('No.' + jumpId + ' は現在のリストに存在しません'); } 
-      } 
+    function jumpToId() {
+      const input    = document.getElementById('search').value.trim();
+      const keywords = input.split(/[\s　]+/);
+      const jumpId   = keywords.find(k => !isNaN(k) && k !== '');
+      if (jumpId) {
+        const target = document.getElementById('word-row-' + jumpId);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          target.classList.remove('jump-target');
+          void target.offsetWidth;
+          target.classList.add('jump-target');
+        } else {
+          alert('No.' + jumpId + ' は現在のリストに存在しません');
+        }
+      }
     }
 
-    function renderWeak() { 
-      const f = parseInt(document.getElementById('w-from').value) || 1; 
-      const t = parseInt(document.getElementById('w-to').value) || 2000; 
-      const el = document.getElementById('weak-list'); 
-      el.innerHTML = ''; 
-      const list = ALL.filter(w => weakSet.has(w.id) && w.id >= f && w.id <= t); 
-      document.getElementById('weak-empty').classList.toggle('hidden', list.length > 0); 
-      list.forEach(w => { 
-        const row = document.createElement('div'); 
-        row.className = 'wrow weak'; 
-        row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${cleanText(w.m)}</span><button class='wbadge weak' onclick='changeStatus(${w.id}, event)'>苦手</button>`; 
-        row.onclick = () => speak(w.w); 
-        el.appendChild(row); 
-      }); 
+    // ─── Weak list ────────────────────────────────────────────
+    function renderWeak() {
+      const f  = parseInt(document.getElementById('w-from').value) || 1;
+      const t  = parseInt(document.getElementById('w-to').value)   || 2000;
+      const el = document.getElementById('weak-list');
+      el.innerHTML = '';
+      const list = ALL.filter(w => weakSet.has(w.id) && w.id >= f && w.id <= t);
+      document.getElementById('weak-empty').classList.toggle('hidden', list.length > 0);
+      list.forEach(w => {
+        const row = document.createElement('div');
+        row.className = 'wrow weak';
+        row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${cleanText(w.m)}</span><button class='wbadge weak' onclick='changeStatus(${w.id}, event)'>苦手</button>`;
+        row.onclick = () => speak(w.w);
+        el.appendChild(row);
+      });
     }
 
-    function applyWeakOnlyFromWeakTab() { 
-      const f = parseInt(document.getElementById('w-from').value) || 1; 
-      const t = parseInt(document.getElementById('w-to').value) || 2000; 
-      deck = ALL.filter(w => w.id >= f && w.id <= t && weakSet.has(w.id)); 
-      if(!deck.length) { alert('範囲内に苦手単語はありません'); return; } 
-      document.getElementById('f-from').value = f; 
-      document.getElementById('f-to').value = t; 
-      resetSession(); idx = 0; switchTab('flash'); updateCard(); 
+    function applyWeakOnlyFromWeakTab() {
+      const f = parseInt(document.getElementById('w-from').value) || 1;
+      const t = parseInt(document.getElementById('w-to').value)   || 2000;
+      deck = ALL.filter(w => w.id >= f && w.id <= t && weakSet.has(w.id));
+      if (!deck.length) { alert('範囲内に苦手単語はありません'); return; }
+      document.getElementById('f-from').value = f;
+      document.getElementById('f-to').value   = t;
+      resetSession(); idx = 0; switchTab('flash'); updateCard();
     }
 
-    function printWeakList() { 
-      const f = parseInt(document.getElementById('w-from').value) || 1; 
-      const t = parseInt(document.getElementById('w-to').value) || 2000; 
-      const list = ALL.filter(w => weakSet.has(w.id) && w.id >= f && w.id <= t); 
-      if(!list.length) { alert('印刷対象の単語がありません'); return; } 
-      const printContainer = document.getElementById('print-container'); 
-      let html = `<div class='print-title'>LEAP 苦手単語チェックシート (No.${f}〜${t})</div><div class='print-columns'>`; 
-      list.forEach(w => { html += `<div class='print-item'><div class='print-check'></div><div class='print-no'>${w.id}</div><div class='print-eng'>${w.w}</div><div class='print-line'></div></div>`; }); 
-      html += `</div>`; 
-      printContainer.innerHTML = html; window.print(); 
-      setTimeout(() => { printContainer.innerHTML = ''; }, 800); 
+    function printWeakList() {
+      const f    = parseInt(document.getElementById('w-from').value) || 1;
+      const t    = parseInt(document.getElementById('w-to').value)   || 2000;
+      const list = ALL.filter(w => weakSet.has(w.id) && w.id >= f && w.id <= t);
+      if (!list.length) { alert('印刷対象の単語がありません'); return; }
+      const printContainer = document.getElementById('print-container');
+      let html = `<div class='print-title'>LEAP 苦手単語チェックシート (No.${f}〜${t})</div><div class='print-columns'>`;
+      list.forEach(w => {
+        html += `<div class='print-item'><div class='print-check'></div><div class='print-no'>${w.id}</div><div class='print-eng'>${w.w}</div><div class='print-line'></div></div>`;
+      });
+      html += `</div>`;
+      printContainer.innerHTML = html;
+      window.print();
+      setTimeout(() => { printContainer.innerHTML = ''; }, 800);
     }
 
+    // ─── Listen ───────────────────────────────────────────────
     function toggleListen() {
       const btn = document.getElementById('btn-listen-play');
       if (isListening) {
@@ -637,8 +701,8 @@
         btn.textContent = '▶ 再開';
       } else {
         if (listenIdx === 0 || !listenDeck.length) {
-          const f = parseInt(document.getElementById('l-from').value) || 1;
-          const t = parseInt(document.getElementById('l-to').value) || 2000;
+          const f      = parseInt(document.getElementById('l-from').value) || 1;
+          const t      = parseInt(document.getElementById('l-to').value)   || 2000;
           const target = document.getElementById('l-target').value;
           listenDeck = ALL.filter(w => w.id >= f && w.id <= t && (target === 'all' || weakSet.has(w.id)));
           if (!listenDeck.length) { alert('対象の単語がありません'); return; }
@@ -656,8 +720,8 @@
       window.speechSynthesis.cancel();
       releaseWakeLock();
       document.getElementById('btn-listen-play').textContent = '▶ 再生';
-      document.getElementById('l-num').textContent = '—'; 
-      document.getElementById('l-eng').textContent = '—'; 
+      document.getElementById('l-num').textContent = '—';
+      document.getElementById('l-eng').textContent = '—';
       document.getElementById('l-jpn').textContent = '—';
     }
 
@@ -665,45 +729,46 @@
       if (!isListening) return;
       if (listenIdx >= listenDeck.length) { alert('聞き流しが完了しました'); stopListen(); return; }
 
-      const w = listenDeck[listenIdx];
-      const speed = parseFloat(document.getElementById('l-speed').value);
-      const intervalSec = parseFloat(document.getElementById('l-interval').value);
-      
+      const w           = listenDeck[listenIdx];
+      const speed       = parseFloat(document.getElementById('l-speed').value);
+      // FIX: intervalSec * 1000 に修正（元は / 0.001 で1000倍になっていたため）
+      const intervalMs  = parseFloat(document.getElementById('l-interval').value) * 1000;
+
       document.getElementById('l-num').textContent = 'No. ' + w.id;
       document.getElementById('l-eng').textContent = w.w;
       document.getElementById('l-jpn').textContent = '...';
 
-      const uttrEn = new SpeechSynthesisUtterance(w.w);
-      uttrEn.lang = 'en-US';
-      uttrEn.rate = speed;
-      
+      const uttrEn  = new SpeechSynthesisUtterance(w.w);
+      uttrEn.lang   = 'en-US';
+      uttrEn.rate   = speed;
+
       uttrEn.onend = () => {
         if (!isListening) return;
         setTimeout(() => {
           if (!isListening) return;
-          const jpText = extractFirstMeaning(w.m);
+          const jpText   = extractFirstMeaning(w.m);
           document.getElementById('l-jpn').textContent = jpText;
-          const uttrJp = new SpeechSynthesisUtterance(jpText);
-          uttrJp.lang = 'ja-JP';
-          uttrJp.rate = speed;
-          uttrJp.onend = () => {
+          const uttrJp   = new SpeechSynthesisUtterance(jpText);
+          uttrJp.lang    = 'ja-JP';
+          uttrJp.rate    = speed;
+          uttrJp.onend   = () => {
             if (!isListening) return;
             listenIdx++;
-            setTimeout(() => {
-              if (isListening) playListenStep();
-            }, 600 / speed);
+            // 単語間インターバル（速度で補正）
+            setTimeout(() => { if (isListening) playListenStep(); }, Math.max(300, 600 / speed));
           };
           window.speechSynthesis.speak(uttrJp);
-        }, intervalSec / 0.001);
+        }, intervalMs);
       };
-      
+
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(uttrEn);
     }
 
+    // ─── Init ─────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('search').addEventListener('input', renderList);
     });
   </script>
 </body>
-  </html>
+</html>
