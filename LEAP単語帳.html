@@ -84,6 +84,17 @@
     .flash-grid .face-meaning { font-size: .85rem; }
     .grid-card-border-ok { border-color: var(--green) !important; }
     .grid-card-border-weak { border-color: var(--red) !important; }
+    /* 判定済みカードの塗りつぶし */
+    .grid-voted-ok .face-front  { background: rgba(62,207,142,.18) !important; border-color: var(--green) !important; }
+    .grid-voted-ok .face-back   { background: rgba(62,207,142,.18) !important; border-color: var(--green) !important; }
+    .grid-voted-ng .face-front  { background: rgba(240,101,112,.15) !important; border-color: var(--red) !important; }
+    .grid-voted-ng .face-back   { background: rgba(240,101,112,.15) !important; border-color: var(--red) !important; }
+    /* 音声ボタン */
+    .speak-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 4px 8px; cursor: pointer; font-size: .8rem; transition: all .15s; }
+    .speak-btn:hover { border-color: var(--accent); color: var(--accent); }
+    /* 修正ボタン */
+    .undo-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 4px 10px; cursor: pointer; font-size: .72rem; transition: all .15s; margin-top: 6px; }
+    .undo-btn:hover { border-color: var(--yellow); color: var(--yellow); }
 
     /* ===== BUTTONS ===== */
     .btnrow { display: flex; gap: 8px; margin-bottom: 10px; }
@@ -615,18 +626,25 @@
     for (let i = start; i < end; i++) {
       const w = deck[i]; const card = document.createElement('div'); card.className = 'card-scene';
       const isW = weakSet.has(w.id), isO = okSet.has(w.id);
-      // 既に判定済みかどうか
       const voted = isW || isO;
-      const okDisabled  = voted ? 'disabled style="opacity:0.35;cursor:default;"' : `onclick='voteGrid(${i},true,event)'`;
-      const ngDisabled  = voted ? 'disabled style="opacity:0.35;cursor:default;"' : `onclick='voteGrid(${i},false,event)'`;
+      const votedClass = isO ? 'grid-voted-ok' : isW ? 'grid-voted-ng' : '';
+      // 判定済みのとき：ボタンをdisabledにし、修正ボタンを表示
+      const voteButtons = voted
+        ? `<button class='wbadge ok' disabled style='opacity:0.3;cursor:default;'>✓ 覚えた</button>
+           <button class='wbadge weak' disabled style='opacity:0.3;cursor:default;'>✗ 苦手</button>
+           <button class='undo-btn' onclick='undoGrid(${i},event)'>↩ 修正</button>`
+        : `<button class='wbadge ok' onclick='voteGrid(${i},true,event)'>✓ 覚えた</button>
+           <button class='wbadge weak' onclick='voteGrid(${i},false,event)'>✗ 苦手</button>`;
       card.innerHTML = `
-        <div class='card-inner ${isW?"grid-card-border-weak":isO?"grid-card-border-ok":""}' id='gc-${i}'>
-          <div class='face face-front' onclick='flipGridCard(${i})'>
-            <div class='face-num'>No. ${w.id}</div>
-            <div class='face-word'>${w.w}</div>
-            <div style='display:flex;gap:5px;margin-top:8px;'>
-              <button class='wbadge ok ${isO?"voted-ok":""}' ${okDisabled}>✓</button>
-              <button class='wbadge weak ${isW?"voted-ng":""}' ${ngDisabled}>✗</button>
+        <div class='card-inner ${votedClass}' id='gc-${i}'>
+          <div class='face face-front'>
+            <div class='face-num' style='display:flex;align-items:center;gap:8px;'>
+              No. ${w.id}
+              <button class='speak-btn' onclick='speakGrid(${i},event)'>🔊</button>
+            </div>
+            <div class='face-word' onclick='flipGridCard(${i})'>${w.w}</div>
+            <div style='display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:8px;'>
+              ${voteButtons}
             </div>
           </div>
           <div class='face face-back' onclick='flipGridCard(${i})'>
@@ -643,6 +661,20 @@
   }
 
   function flipGridCard(i) { document.getElementById('gc-'+i).classList.toggle('flip'); speak(deck[i].w); }
+  function speakGrid(i, event) { event.stopPropagation(); speak(deck[i].w); }
+
+  // 修正ボタン：判定をリセットして表に戻す
+  function undoGrid(i, event) {
+    event.stopPropagation();
+    const w = deck[i];
+    okSet.delete(w.id); weakSet.delete(w.id);
+    saveStatus(); updateAccuracy();
+    // カードを表に戻してから再描画
+    const cardInner = document.getElementById('gc-'+i);
+    if (cardInner) cardInner.classList.remove('flip');
+    setTimeout(() => renderGrid(), 50);
+    saveProgress();
+  }
 
   // FIX: グリッドページングはgridPageIdxを使う
   function moveGridPage(dir) {
@@ -676,13 +708,24 @@
     if (ok) { okSet.add(w.id); weakSet.delete(w.id); sessionOk++; recordStudy(1); }
     else    { weakSet.add(w.id); okSet.delete(w.id); sessionNg++; }
     saveStatus(); updateAccuracy();
-    // ボタンを即座に無効化・カード枠の色を即座に変更（renderGrid待ちにしない）
+
     const cardInner = document.getElementById('gc-' + i);
     if (cardInner) {
-      cardInner.classList.remove('grid-card-border-ok', 'grid-card-border-weak');
-      cardInner.classList.add(ok ? 'grid-card-border-ok' : 'grid-card-border-weak');
-      const btns = cardInner.querySelectorAll('.wbadge');
-      btns.forEach(btn => { btn.disabled = true; btn.style.opacity = '0.35'; btn.style.cursor = 'default'; btn.removeAttribute('onclick'); });
+      // 1) カード全体を色で塗りつぶす
+      cardInner.classList.remove('grid-voted-ok', 'grid-voted-ng');
+      cardInner.classList.add(ok ? 'grid-voted-ok' : 'grid-voted-ng');
+      // 2) 自動で裏返す（まだ表なら）
+      if (!cardInner.classList.contains('flip')) {
+        cardInner.classList.add('flip');
+      }
+      // 3) ボタンを無効化 → 修正ボタンに差し替え
+      const btnWrap = cardInner.querySelector('.face-front > div:last-child');
+      if (btnWrap) {
+        btnWrap.innerHTML = `
+          <button class='wbadge ok' disabled style='opacity:0.3;cursor:default;'>✓ 覚えた</button>
+          <button class='wbadge weak' disabled style='opacity:0.3;cursor:default;'>✗ 苦手</button>
+          <button class='undo-btn' onclick='undoGrid(${i},event)'>↩ 修正</button>`;
+      }
     }
     saveProgress();
   }
