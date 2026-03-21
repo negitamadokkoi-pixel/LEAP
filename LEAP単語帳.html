@@ -126,7 +126,7 @@
     .qword { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; color: var(--text); }
     .opts { display: flex; flex-direction: column; gap: 10px; }
     .opt { background: var(--s2); border: 1px solid var(--border); padding: 15px; border-radius: 10px; cursor: pointer; text-align: left; font-size: 0.95rem; }
-    .opt.correct { background: var(--green) !important; color: #000; font-weight: bold; }
+    .opt.correct { background: var(--green) !important; color: #000 !font-weight: bold; }
     .opt.wrong { background: var(--red) !important; color: #fff; }
 
     .wlist { display: flex; flex-direction: column; gap: 8px; }
@@ -145,6 +145,13 @@
     .jump-input { flex: 1; background: var(--s2); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 10px; font-size: .9rem; }
 
     .hidden { display: none !important; }
+
+    @keyframes highlight-row {
+      0% { background: var(--s1); }
+      50% { background: var(--s3); border-color: var(--accent); }
+      100% { background: var(--s1); }
+    }
+    .jump-target { animation: highlight-row 1.5s ease; }
 
     @media print {
       body > :not(#print-container) { display: none !important; }
@@ -264,7 +271,7 @@
 
     <div id='pane-list' class='hidden'>
       <div class='jump-box'>
-        <input class='jump-input' type='text' id='search' placeholder='検索 / 番号入力でGo' onkeydown='if(event.key==="Enter")jumpToId()'>
+        <input class='jump-input' type='text' id='search' placeholder='検索 (スペースでOR検索) / 番号入力でGo' onkeydown='if(event.key==="Enter")jumpToId()'>
         <button class='btn-go' onclick='jumpToId()'>Go</button>
       </div>
       <div class='wlist' id='wlist'></div>
@@ -286,10 +293,10 @@
 
     <div id='pane-listen' class='hidden'>
       <div class='toolbar' style='justify-content:center; flex-direction:column; gap:15px; background:var(--s2); padding:20px; border-radius:var(--r); margin-bottom: 20px;'>
-        <div class='range-row' style='justify-content:center; gap:10px;'>
+        <div class='range-row' style='justify-content:center; flex-wrap:wrap; gap:10px;'>
           No.<input type='number' id='l-from' class='tbinput' value='1'>〜<input type='number' id='l-to' class='tbinput' value='100'>
         </div>
-        <div class='range-row' style='justify-content:center; gap:10px;'>
+        <div class='range-row' style='justify-content:center; flex-wrap:wrap; gap:10px;'>
           対象:
           <select id='l-target' class='tbinput' style='width:auto;'>
             <option value='all'>すべて</option>
@@ -331,6 +338,7 @@
     let flashMode = 'single';
     const GRID_SIZE = 10;
     let isListening = false, listenDeck = [], listenIdx = 0, wakeLock = null;
+    let qDeck = [], qIdx = 0;
 
     function storageKey(k) { return 'leap_' + currentFileName + '_' + k; }
 
@@ -391,6 +399,8 @@
       };
       reader.readAsText(file);
     }
+
+    function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
     function applyRange(startIdx = 0) {
       const f = parseInt(document.getElementById('f-from').value) || 1;
@@ -488,7 +498,6 @@
     function flipCard() { if (!isAnimating) document.getElementById('card-inner').classList.toggle('flip'); }
     function go(d) { if (!isAnimating && deck.length) { document.getElementById('card-inner').classList.remove('flip'); idx = (idx + d + deck.length) % deck.length; updateCard(); } }
 
-    function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
     function toggleShuffle() { shuffled = !shuffled; const btn = document.getElementById('shuf-btn'); btn.style.background = shuffled ? 'var(--accent)' : 'var(--s2)'; btn.style.color = shuffled ? '#fff' : 'var(--muted)'; applyRange(0); }
 
     function updateAccuracy() { const total = sessionOk + sessionNg; const rate = total === 0 ? 0 : Math.round(sessionOk / total * 100); document.getElementById('f-accuracy').textContent = rate; }
@@ -501,6 +510,35 @@
       document.getElementById('chart-text').textContent = progress + '%';
     }
 
+    function applyQuizRange() {
+      const f = parseInt(document.getElementById('q-from').value) || 1;
+      const t = parseInt(document.getElementById('q-to').value) || 2000;
+      qDeck = ALL.filter(w => w.id >= f && w.id <= t);
+      if (!qDeck.length) return alert('対象がありません');
+      shuffle(qDeck); qIdx = 0; nextQuestion();
+    }
+
+    function nextQuestion() {
+      if (qIdx >= qDeck.length) return alert('クイズ終了');
+      const correct = qDeck[qIdx];
+      const pool = ALL.filter(w => w.id !== correct.id);
+      const choices = shuffle([correct, ...shuffle(pool).slice(0, 3)]);
+      document.getElementById('q-word').textContent = correct.w;
+      speak(correct.w);
+      const optContainer = document.getElementById('q-opts'); optContainer.innerHTML = '';
+      choices.forEach(c => {
+        const div = document.createElement('div'); div.className = 'opt'; div.textContent = cleanText(c.m);
+        div.onclick = () => {
+          if (div.classList.contains('correct') || div.classList.contains('wrong')) return;
+          if (c.id === correct.id) {
+            div.classList.add('correct'); okSet.add(correct.id); weakSet.delete(correct.id); saveStatus();
+            setTimeout(() => { qIdx++; nextQuestion(); }, 600);
+          } else { div.classList.add('wrong'); weakSet.add(correct.id); okSet.delete(correct.id); saveStatus(); }
+        };
+        optContainer.appendChild(div);
+      });
+    }
+
     function switchTab(t) {
       if (isListening) stopListen(); window.speechSynthesis.cancel();
       ['flash', 'quiz', 'list', 'weak', 'listen'].forEach(x => document.getElementById('pane-' + x).classList.toggle('hidden', x !== t));
@@ -509,15 +547,26 @@
     }
 
     function jumpToId() {
-      const id = document.getElementById('search').value.trim();
-      const target = document.getElementById('word-row-' + id);
-      if (target) { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+      const input = document.getElementById('search').value.trim();
+      const keywords = input.split(/[\s　]+/);
+      const jumpId = keywords.find(k => !isNaN(k) && k !== '');
+      if (jumpId) {
+        const target = document.getElementById('word-row-' + jumpId);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          target.classList.remove('jump-target'); void target.offsetWidth; target.classList.add('jump-target');
+        } else { alert('No.' + jumpId + ' は現在のリストにありません'); }
+      }
     }
 
     function renderList() {
       const el = document.getElementById('wlist'); el.innerHTML = '';
-      const filter = document.getElementById('search').value.toLowerCase();
-      ALL.filter(w => !filter || w.w.toLowerCase().includes(filter) || w.m.includes(filter)).forEach(w => {
+      const input = document.getElementById('search').value.toLowerCase();
+      const keywords = input.split(/[\s　]+/).filter(k => k.length > 0 && isNaN(k));
+      ALL.filter(w => {
+        if (!keywords.length) return true;
+        return keywords.every(q => w.w.toLowerCase().includes(q) || w.m.includes(q));
+      }).forEach(w => {
         const row = document.createElement('div');
         const isW = weakSet.has(w.id), isO = okSet.has(w.id);
         row.className = 'wrow' + (isW ? ' weak' : isO ? ' ok' : '');
@@ -560,7 +609,7 @@
       let html = `<div class='print-title'>LEAP 苦手リスト (No.${f}-${t})</div><div class='print-columns'>`;
       list.forEach(w => html += `<div class='print-item'><div class='print-check'></div><div class='print-no'>${w.id}</div><div class='print-eng'>${w.w}</div><div class='print-line'></div></div>`);
       document.getElementById('print-container').innerHTML = html + '</div>';
-      window.print();
+      window.print(); setTimeout(() => { document.getElementById('print-container').innerHTML = ''; }, 800);
     }
 
     function toggleListen() {
