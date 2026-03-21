@@ -692,6 +692,7 @@
     if (ok) { okSet.add(w.id); weakSet.delete(w.id); sessionOk++; recordStudy(1); }
     else    { weakSet.add(w.id); okSet.delete(w.id); sessionNg++; }
     saveStatus(); updateAccuracy();
+    speak(w.w); // 音声再生
     const inner = document.getElementById('card-inner');
     if (!inner.classList.contains('flip')) inner.classList.add('flip');
     setTimeout(() => {
@@ -708,6 +709,7 @@
     if (ok) { okSet.add(w.id); weakSet.delete(w.id); sessionOk++; recordStudy(1); }
     else    { weakSet.add(w.id); okSet.delete(w.id); sessionNg++; }
     saveStatus(); updateAccuracy();
+    speak(w.w); // 音声再生
 
     const cardInner = document.getElementById('gc-' + i);
     if (cardInner) {
