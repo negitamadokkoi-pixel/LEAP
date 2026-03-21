@@ -74,7 +74,6 @@
       letter-spacing: 6px;
       color: var(--accent);
     }
-
     .logo em { color: var(--text); font-style: normal; }
 
     .hstats { display: flex; gap: 20px; }
@@ -93,14 +92,12 @@
     .tbbtn { background: var(--s2); border: 1px solid var(--border); color: var(--muted); padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: .82rem; transition: all .2s; }
     .btn-go { background: var(--accent); color: #fff; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-weight: 700; border: none; font-size: 0.82rem; }
 
+    .mode-switch { background: var(--s3); padding: 4px; border-radius: 10px; display: flex; gap: 4px; }
+    .mode-btn { padding: 6px 12px; border-radius: 8px; border: none; background: transparent; color: var(--muted); cursor: pointer; font-size: 0.8rem; }
+    .mode-btn.active { background: var(--accent); color: #fff; }
+
     .pgwrap { margin-bottom: 18px; }
-    .pginfo {
-      display: flex;
-      justify-content: space-between;
-      font-size: .75rem;
-      color: var(--muted);
-      margin-bottom: 5px;
-    }
+    .pginfo { display: flex; justify-content: space-between; font-size: .75rem; color: var(--muted); margin-bottom: 5px; }
     .pgbar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
     .pgfill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); transition: width .4s; }
 
@@ -113,6 +110,11 @@
     .face-word { font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem; letter-spacing: 2px; color: var(--text); margin: 10px 0; }
     .face-eng { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--accent); margin-bottom: 15px; }
     .face-num { font-size: 0.8rem; color: var(--muted); }
+
+    .flash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin-top: 20px; }
+    .flash-grid .card-inner { min-height: 200px; }
+    .flash-grid .face-word { font-size: 2.2rem; }
+    .flash-grid .face-eng { font-size: 1.5rem; }
 
     .btnrow { display: flex; gap: 8px; margin-bottom: 10px; }
     .btn { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--s2); color: var(--text); cursor: pointer; font-size: 0.9rem; font-weight: bold; }
@@ -142,34 +144,18 @@
     .jump-box { display: flex; gap: 8px; margin-bottom: 15px; }
     .jump-input { flex: 1; background: var(--s2); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 10px; font-size: .9rem; }
 
-    @keyframes highlight-row {
-      0% { background: var(--s1); }
-      50% { background: var(--s3); border-color: var(--accent); }
-      100% { background: var(--s1); }
-    }
-    .jump-target { animation: highlight-row 1.5s ease; }
-
     .hidden { display: none !important; }
 
     @media print {
       body > :not(#print-container) { display: none !important; }
       #print-container { display: block !important; position: absolute; left: 0; top: 0; width: 100%; color: #000; background: #fff; }
-      #print-container div { display: block !important; visibility: visible; }
       .print-title { font-size: 14px; font-weight: bold; margin-bottom: 10px; text-align: center; border-bottom: 1px solid #000; padding-bottom: 4px; }
-      .print-columns { column-count: 3; column-gap: 20px; column-rule: 0.5px solid #eee; }
+      .print-columns { column-count: 3; column-gap: 20px; }
       .print-item { display: flex; border-bottom: 0.5px solid #ddd; padding: 4px 0; align-items: center; page-break-inside: avoid; }
-      .print-check { width: 10px; height: 10px; border: 0.5px solid #000; margin-right: 5px; flex-shrink: 0; }
-      .print-no { font-size: 8px; color: #666; width: 22px; flex-shrink: 0; }
-      .print-eng { font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: bold; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .print-check { width: 10px; height: 10px; border: 0.5px solid #000; margin-right: 5px; }
+      .print-no { font-size: 8px; color: #666; width: 22px; }
+      .print-eng { font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: bold; flex: 1; }
       .print-line { width: 40px; border-bottom: 0.5px dotted #aaa; height: 10px; margin-left: 5px; }
-      @page { size: A4; margin: 10mm; }
-    }
-    
-    @media (max-width: 600px) {
-      .face-word { font-size: 2.8rem; }
-      .wrow { flex-wrap: wrap; }
-      .wbadge { margin-left: auto; }
-      .tabs { padding-bottom: 5px; }
     }
   </style>
 </head>
@@ -216,7 +202,12 @@
           <button class='btn-go' onclick='applyRangeByButton()'>適用</button>
         </div>
         <button class='tbbtn' id='shuf-btn' onclick='toggleShuffle()'>シャッフル</button>
+        <div class='mode-switch'>
+          <button id='m-single' class='mode-btn active' onclick='setFlashMode("single")'>単体</button>
+          <button id='m-grid' class='mode-btn' onclick='setFlashMode("grid")'>一覧</button>
+        </div>
       </div>
+
       <div class='pgwrap'>
         <div class='pginfo'>
           <span id='f-prog'>0 / 0</span>
@@ -225,27 +216,38 @@
         </div>
         <div class='pgbar'><div class='pgfill' id='f-fill' style='width:0%'></div></div>
       </div>
-      <div class='card-scene' onclick='flipCard()'>
-        <div class='card-inner' id='card-inner'>
-          <div class='face face-front'>
-            <div class='face-num' id='f-num'>—</div>
-            <div class='face-word' id='f-word'>—</div>
-          </div>
-          <div class='face face-back'>
-            <div class='face-num' id='b-num'>—</div>
-            <div class='face-eng' id='b-eng'>—</div>
-            <div id='b-meaning' style='font-size:1.1rem;'>—</div>
+
+      <div id='flash-single-view'>
+        <div class='card-scene' onclick='flipCard()'>
+          <div class='card-inner' id='card-inner'>
+            <div class='face face-front'>
+              <div class='face-num' id='f-num'>—</div>
+              <div class='face-word' id='f-word'>—</div>
+            </div>
+            <div class='face face-back'>
+              <div class='face-num' id='b-num'>—</div>
+              <div class='face-eng' id='b-eng'>—</div>
+              <div id='b-meaning' style='font-size:1.1rem;'>—</div>
+            </div>
           </div>
         </div>
+        <div class='btnrow'>
+          <button class='btn btn-ok' onclick='vote(true)'>✓ 覚えた</button>
+          <button class='btn' onclick='flipCard()'>↺ 回転</button>
+          <button class='btn btn-ng' onclick='vote(false)'>✗ 苦手</button>
+        </div>
+        <div class='btnrow'>
+          <button class='btn' onclick='go(-1)'>← 前へ</button>
+          <button class='btn' onclick='go(1)'>次へ →</button>
+        </div>
       </div>
-      <div class='btnrow'>
-        <button class='btn btn-ok' onclick='vote(true)'>✓ 覚えた</button>
-        <button class='btn' onclick='flipCard()'>↺ 回転</button>
-        <button class='btn btn-ng' onclick='vote(false)'>✗ 苦手</button>
-      </div>
-      <div class='btnrow'>
-        <button class='btn' onclick='go(-1)'>← 前へ</button>
-        <button class='btn' onclick='go(1)'>次へ →</button>
+
+      <div id='flash-grid-view' class='hidden'>
+        <div id='grid-container' class='flash-grid'></div>
+        <div class='btnrow' style='margin-top:20px;'>
+          <button class='btn' onclick='moveGridPage(-1)'>← 前の10件</button>
+          <button class='btn' onclick='moveGridPage(1)'>次の10件 →</button>
+        </div>
       </div>
     </div>
 
@@ -262,7 +264,7 @@
 
     <div id='pane-list' class='hidden'>
       <div class='jump-box'>
-        <input class='jump-input' type='text' id='search' placeholder='検索 (スペースでOR検索) / 番号入力でGo' onkeydown='if(event.key==="Enter")jumpToId()'>
+        <input class='jump-input' type='text' id='search' placeholder='検索 / 番号入力でGo' onkeydown='if(event.key==="Enter")jumpToId()'>
         <button class='btn-go' onclick='jumpToId()'>Go</button>
       </div>
       <div class='wlist' id='wlist'></div>
@@ -284,10 +286,10 @@
 
     <div id='pane-listen' class='hidden'>
       <div class='toolbar' style='justify-content:center; flex-direction:column; gap:15px; background:var(--s2); padding:20px; border-radius:var(--r); margin-bottom: 20px;'>
-        <div class='range-row' style='justify-content:center; flex-wrap:wrap; gap:10px;'>
+        <div class='range-row' style='justify-content:center; gap:10px;'>
           No.<input type='number' id='l-from' class='tbinput' value='1'>〜<input type='number' id='l-to' class='tbinput' value='100'>
         </div>
-        <div class='range-row' style='justify-content:center; flex-wrap:wrap; gap:10px;'>
+        <div class='range-row' style='justify-content:center; gap:10px;'>
           対象:
           <select id='l-target' class='tbinput' style='width:auto;'>
             <option value='all'>すべて</option>
@@ -305,30 +307,31 @@
             <option value='0'>0秒</option>
             <option value='0.5'>0.5秒</option>
             <option value='1.0' selected>1.0秒</option>
-            <option value='1.5'>1.5秒</option>
             <option value='2.0'>2.0秒</option>
           </select>
         </div>
-        <div style='display:flex; gap:10px; justify-content:center; margin-top:5px;'>
+        <div style='display:flex; gap:10px; justify-content:center;'>
           <button class='btn-go' id='btn-listen-play' onclick='toggleListen()' style='width:120px;'>▶ 再生</button>
           <button class='tbbtn' onclick='stopListen()'>■ 停止</button>
         </div>
       </div>
       <div class='qcard' style='min-height:220px; display:flex; flex-direction:column; justify-content:center;'>
         <div class='face-num' id='l-num'>—</div>
-        <div class='face-eng' id='l-eng' style='font-size:2.8rem; margin:15px 0; color:var(--accent); font-family:"Bebas Neue", sans-serif;'>—</div>
+        <div class='face-eng' id='l-eng' style='font-size:2.8rem; margin:15px 0; color:var(--accent); font-family:"Bebas Neue";'>—</div>
         <div id='l-jpn' style='font-size:1.2rem; color:var(--text); min-height:2em;'>—</div>
       </div>
     </div>
-
   </main>
 
   <script>
-    // ─── State ───────────────────────────────────────────────
     let ALL = [], deck = [], idx = 0, shuffled = false, isAnimating = false;
-
-    // ファイル名をキーに含めて複数単語帳を混在させない
     let currentFileName = '';
+    let weakSet = new Set(), okSet = new Set();
+    let sessionOk = 0, sessionNg = 0;
+    let flashMode = 'single';
+    const GRID_SIZE = 10;
+    let isListening = false, listenDeck = [], listenIdx = 0, wakeLock = null;
+
     function storageKey(k) { return 'leap_' + currentFileName + '_' + k; }
 
     function loadSets() {
@@ -336,52 +339,6 @@
       okSet   = new Set(JSON.parse(localStorage.getItem(storageKey('ok'))   || '[]'));
     }
 
-    let weakSet = new Set();
-    let okSet   = new Set();
-
-    let sessionOk = 0, sessionNg = 0;
-    shuffled = localStorage.getItem('leap_shuffled') === 'true';
-
-    let isListening = false, listenDeck = [], listenIdx = 0, wakeLock = null;
-
-    // ─── Text helpers ─────────────────────────────────────────
-    function cleanText(t) {
-      if (!t) return '';
-      return t.replace(/\[[^\]]+\]/g, '').trim();
-    }
-
-    function extractFirstMeaning(m) {
-      if (!m) return '';
-      return m.split('②')[0].split('\n')[0]
-        .replace(/①/g, '')
-        .replace(/【[^】]+】/g, '')
-        .replace(/\[[^\]]+\]/g, '')
-        .trim();
-    }
-
-    // ─── Speech ───────────────────────────────────────────────
-    function speak(text, lang = 'en-US', speed = 1.0, callback) {
-      if (!text) return;
-      window.speechSynthesis.cancel();
-      const uttr = new SpeechSynthesisUtterance(text);
-      uttr.lang = lang;
-      uttr.rate = speed;
-      if (callback) uttr.onend = callback;
-      window.speechSynthesis.speak(uttr);
-    }
-
-    // ─── Wake Lock ────────────────────────────────────────────
-    async function requestWakeLock() {
-      try {
-        if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
-      } catch (err) { console.warn('WakeLock:', err); }
-    }
-
-    function releaseWakeLock() {
-      if (wakeLock !== null) { wakeLock.release(); wakeLock = null; }
-    }
-
-    // ─── Persistence ──────────────────────────────────────────
     function saveStatus() {
       localStorage.setItem(storageKey('weak'), JSON.stringify([...weakSet]));
       localStorage.setItem(storageKey('ok'),   JSON.stringify([...okSet]));
@@ -389,26 +346,31 @@
     }
 
     function saveProgress() {
-      localStorage.setItem('leap_current_idx',    idx);
-      localStorage.setItem('leap_session_ok',     sessionOk);
-      localStorage.setItem('leap_session_ng',     sessionNg);
-      localStorage.setItem('leap_range_from',     document.getElementById('f-from').value);
-      localStorage.setItem('leap_range_to',       document.getElementById('f-to').value);
-      localStorage.setItem('leap_shuffled',       shuffled);
-      localStorage.setItem('leap_current_deck',   JSON.stringify(deck.map(w => w.id)));
-      localStorage.setItem('leap_current_file',   currentFileName);
+      localStorage.setItem('leap_current_idx', idx);
+      localStorage.setItem('leap_session_ok', sessionOk);
+      localStorage.setItem('leap_session_ng', sessionNg);
+      localStorage.setItem('leap_range_from', document.getElementById('f-from').value);
+      localStorage.setItem('leap_range_to', document.getElementById('f-to').value);
+      localStorage.setItem('leap_shuffled', shuffled);
+      localStorage.setItem('leap_current_deck', JSON.stringify(deck.map(w => w.id)));
+      localStorage.setItem('leap_current_file', currentFileName);
     }
 
-    // ─── Status badge cycle ───────────────────────────────────
-    function changeStatus(id, event) {
-      if (event) event.stopPropagation();
-      if (okSet.has(id))   { okSet.delete(id);   weakSet.add(id); }
-      else if (weakSet.has(id)) { weakSet.delete(id); }
-      else                 { okSet.add(id); }
-      saveStatus(); renderList(); renderWeak();
+    function cleanText(t) { return t ? t.replace(/\[[^\]]+\]/g, '').trim() : ''; }
+    function extractFirstMeaning(m) { return m ? m.split('②')[0].split('\n')[0].replace(/①/g, '').replace(/【[^】]+】/g, '').replace(/\[[^\]]+\]/g, '').trim() : ''; }
+
+    function speak(text, lang = 'en-US', speed = 1.0, callback) {
+      if (!text) return;
+      window.speechSynthesis.cancel();
+      const uttr = new SpeechSynthesisUtterance(text);
+      uttr.lang = lang; uttr.rate = speed;
+      if (callback) uttr.onend = callback;
+      window.speechSynthesis.speak(uttr);
     }
 
-    // ─── Load JSON ────────────────────────────────────────────
+    async function requestWakeLock() { try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {} }
+    function releaseWakeLock() { if (wakeLock) { wakeLock.release(); wakeLock = null; } }
+
     function loadData(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -417,358 +379,225 @@
       reader.onload = (e) => {
         ALL = JSON.parse(e.target.result);
         document.getElementById('data-loader').style.display = 'none';
-
         loadSets();
-
         const savedFrom = localStorage.getItem('leap_range_from');
-        const savedTo   = localStorage.getItem('leap_range_to');
-        // 同じファイルの保存データのみ復元
-        const savedFile = localStorage.getItem('leap_current_file');
-        if (savedFrom && savedFile === currentFileName) {
+        const savedTo = localStorage.getItem('leap_range_to');
+        if (savedFrom && localStorage.getItem('leap_current_file') === currentFileName) {
           document.getElementById('f-from').value = savedFrom;
-          document.getElementById('f-to').value   = savedTo;
+          document.getElementById('f-to').value = savedTo;
         }
-
-        const savedIdx     = parseInt(localStorage.getItem('leap_current_idx') || '0');
-        const savedDeckIds = JSON.parse(localStorage.getItem('leap_current_deck') || '[]');
-
-        updateShuffleBtnUI();
-
-        if (savedDeckIds.length > 0 && savedFile === currentFileName) {
-          const f = parseInt(document.getElementById('f-from').value) || 1;
-          const t = parseInt(document.getElementById('f-to').value)   || 2000;
-          const restoredDeck = savedDeckIds.map(id => ALL.find(w => w.id === id)).filter(Boolean);
-          if (restoredDeck.length > 0 && restoredDeck.every(w => w.id >= f && w.id <= t)) {
-            deck = restoredDeck;
-            idx  = Math.min(savedIdx, deck.length - 1);
-            sessionOk = parseInt(localStorage.getItem('leap_session_ok') || '0');
-            sessionNg = parseInt(localStorage.getItem('leap_session_ng') || '0');
-          } else {
-            applyRange(0);
-          }
-        } else {
-          applyRange(0);
-        }
-
+        applyRange(0);
         updateAccuracy(); updateCard(); updateHdr();
       };
       reader.readAsText(file);
     }
 
-    // ─── Flash range ──────────────────────────────────────────
-    function applyRangeByButton() { applyRange(0); }
-
     function applyRange(startIdx = 0) {
       const f = parseInt(document.getElementById('f-from').value) || 1;
-      const t = parseInt(document.getElementById('f-to').value)   || 2000;
+      const t = parseInt(document.getElementById('f-to').value) || 2000;
       deck = ALL.filter(w => w.id >= f && w.id <= t);
       if (shuffled) shuffle(deck);
       idx = startIdx;
-      if (startIdx === 0) resetSession();
+      if (startIdx === 0) { sessionOk = 0; sessionNg = 0; }
       updateAccuracy(); updateCard();
     }
 
-    function resetSession() { sessionOk = 0; sessionNg = 0; updateAccuracy(); }
+    function applyRangeByButton() { applyRange(0); }
 
-    function updateAccuracy() {
-      const total = sessionOk + sessionNg;
-      const rate  = total === 0 ? 0 : Math.round(sessionOk / total * 100);
-      document.getElementById('f-accuracy').textContent = rate;
-      saveProgress();
+    function setFlashMode(m) {
+      flashMode = m;
+      document.getElementById('m-single').classList.toggle('active', m === 'single');
+      document.getElementById('m-grid').classList.toggle('active', m === 'grid');
+      document.getElementById('flash-single-view').classList.toggle('hidden', m !== 'single');
+      document.getElementById('flash-grid-view').classList.toggle('hidden', m !== 'grid');
+      updateCard();
     }
 
     function updateCard() {
       if (!deck.length) return;
-      const w = deck[idx];
-      document.getElementById('f-num').textContent = document.getElementById('b-num').textContent = 'No. ' + w.id;
-      document.getElementById('f-word').textContent = document.getElementById('b-eng').textContent = w.w;
-      document.getElementById('b-meaning').textContent = cleanText(w.m);
-      document.getElementById('f-prog').textContent = (idx + 1) + ' / ' + deck.length;
-      document.getElementById('f-fill').style.width = ((idx + 1) / deck.length * 100) + '%';
-      document.getElementById('f-pct').textContent  = Math.round((idx + 1) / deck.length * 100) + '%';
+      if (flashMode === 'single') {
+        const w = deck[idx];
+        document.getElementById('f-num').textContent = 'No. ' + w.id;
+        document.getElementById('f-word').textContent = w.w;
+        document.getElementById('b-num').textContent = 'No. ' + w.id;
+        document.getElementById('b-eng').textContent = w.w;
+        document.getElementById('b-meaning').textContent = cleanText(w.m);
+        document.getElementById('f-prog').textContent = (idx + 1) + ' / ' + deck.length;
+        document.getElementById('f-fill').style.width = ((idx + 1) / deck.length * 100) + '%';
+        document.getElementById('f-pct').textContent = Math.round((idx + 1) / deck.length * 100) + '%';
+        speak(w.w);
+      } else {
+        renderGrid();
+      }
       saveProgress();
-      speak(w.w);
     }
 
-    function flipCard() {
-      if (!isAnimating) document.getElementById('card-inner').classList.toggle('flip');
+    function renderGrid() {
+      const container = document.getElementById('grid-container');
+      container.innerHTML = '';
+      const start = Math.floor(idx / GRID_SIZE) * GRID_SIZE;
+      const end = Math.min(start + GRID_SIZE, deck.length);
+      for (let i = start; i < end; i++) {
+        const w = deck[i];
+        const card = document.createElement('div');
+        card.className = 'card-scene';
+        const border = weakSet.has(w.id) ? 'border-color:var(--red);' : okSet.has(w.id) ? 'border-color:var(--green);' : '';
+        card.innerHTML = `
+          <div class='card-inner' id='grid-card-${i}' style='${border}'>
+            <div class='face face-front' onclick='flipGridCard(${i})'>
+              <div class='face-num'>No. ${w.id}</div>
+              <div class='face-word'>${w.w}</div>
+              <div style='margin-top:10px; display:flex; gap:5px;'>
+                <button class='wbadge ok' onclick='voteGrid(${i}, true, event)'>✓</button>
+                <button class='wbadge weak' onclick='voteGrid(${i}, false, event)'>✗</button>
+              </div>
+            </div>
+            <div class='face face-back' onclick='flipGridCard(${i})'>
+              <div class='face-num'>No. ${w.id}</div>
+              <div class='face-eng'>${w.w}</div>
+              <div style='font-size:0.9rem;'>${cleanText(w.m)}</div>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      }
+      document.getElementById('f-prog').textContent = (start + 1) + '-' + end + ' / ' + deck.length;
+      document.getElementById('f-fill').style.width = (end / deck.length * 100) + '%';
+      document.getElementById('f-pct').textContent = Math.round(end / deck.length * 100) + '%';
     }
+
+    function flipGridCard(i) { document.getElementById('grid-card-' + i).classList.toggle('flip'); speak(deck[i].w); }
+    function moveGridPage(dir) { const nextIdx = idx + (dir * GRID_SIZE); if (nextIdx >= 0 && nextIdx < deck.length) { idx = nextIdx; updateCard(); window.scrollTo({top:0, behavior:'smooth'}); } }
 
     function vote(ok) {
       if (isAnimating || !deck.length) return;
-      isAnimating = true;
-      const w = deck[idx];
-      if (ok) { okSet.add(w.id); weakSet.delete(w.id); sessionOk++; }
-      else     { weakSet.add(w.id); okSet.delete(w.id); sessionNg++; }
+      isAnimating = true; const w = deck[idx];
+      if (ok) { okSet.add(w.id); weakSet.delete(w.id); sessionOk++; } else { weakSet.add(w.id); okSet.delete(w.id); sessionNg++; }
       saveStatus(); updateAccuracy();
       const inner = document.getElementById('card-inner');
       if (!inner.classList.contains('flip')) inner.classList.add('flip');
-      setTimeout(() => {
-        inner.classList.remove('flip');
-        setTimeout(() => {
-          idx = (idx + 1) % deck.length;
-          updateCard(); isAnimating = false;
-        }, 350);
-      }, 1000);
+      setTimeout(() => { inner.classList.remove('flip'); setTimeout(() => { idx = (idx + 1) % deck.length; updateCard(); isAnimating = false; }, 350); }, 1000);
     }
 
-    function go(d) {
-      if (!isAnimating && deck.length) {
-        document.getElementById('card-inner').classList.remove('flip');
-        idx = (idx + d + deck.length) % deck.length;
-        updateCard();
-      }
+    function voteGrid(i, ok, event) {
+      event.stopPropagation(); const w = deck[i];
+      if (ok) { okSet.add(w.id); weakSet.delete(w.id); sessionOk++; } else { weakSet.add(w.id); okSet.delete(w.id); sessionNg++; }
+      saveStatus(); updateAccuracy(); renderGrid();
     }
 
-    // ─── Shuffle ──────────────────────────────────────────────
-    function updateShuffleBtnUI() {
-      const btn = document.getElementById('shuf-btn');
-      btn.style.background = shuffled ? 'var(--accent)' : 'var(--s2)';
-      btn.style.color       = shuffled ? '#fff'          : 'var(--muted)';
-    }
+    function flipCard() { if (!isAnimating) document.getElementById('card-inner').classList.toggle('flip'); }
+    function go(d) { if (!isAnimating && deck.length) { document.getElementById('card-inner').classList.remove('flip'); idx = (idx + d + deck.length) % deck.length; updateCard(); } }
 
-    function toggleShuffle() { shuffled = !shuffled; updateShuffleBtnUI(); applyRange(0); }
+    function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+    function toggleShuffle() { shuffled = !shuffled; const btn = document.getElementById('shuf-btn'); btn.style.background = shuffled ? 'var(--accent)' : 'var(--s2)'; btn.style.color = shuffled ? '#fff' : 'var(--muted)'; applyRange(0); }
 
-    // FIX: 元のコードは Math.floor(Math.random() / (1 / (i+1))) で
-    //      j === i+1 になり得るバグがあったため修正
-    function shuffle(a) {
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      return a;
-    }
-
-    // ─── Tab switch ───────────────────────────────────────────
-    function switchTab(t) {
-      if (isListening) stopListen();
-      window.speechSynthesis.cancel();
-      ['flash', 'quiz', 'list', 'weak', 'listen'].forEach(x => {
-        document.getElementById('pane-' + x).classList.toggle('hidden', x !== t);
-      });
-      document.querySelectorAll('.tab').forEach((tab, i) => {
-        tab.classList.toggle('active', ['flash','quiz','list','weak','listen'][i] === t);
-      });
-      if (t === 'weak') renderWeak();
-      if (t === 'list') renderList();
-    }
-
-    // ─── Header stats ─────────────────────────────────────────
+    function updateAccuracy() { const total = sessionOk + sessionNg; const rate = total === 0 ? 0 : Math.round(sessionOk / total * 100); document.getElementById('f-accuracy').textContent = rate; }
     function updateHdr() {
-      const total    = ALL.length || 1;
-      const progress = Math.round(okSet.size / total * 100);
+      const total = ALL.length || 1; const progress = Math.round(okSet.size / total * 100);
       document.getElementById('h-range').textContent = deck.length;
-      document.getElementById('h-done').textContent  = okSet.size + weakSet.size;
-      document.getElementById('h-ok').textContent    = okSet.size;
-      const fill = document.getElementById('chart-fill');
-      if (fill) fill.setAttribute('stroke-dasharray', progress + ' 100');
-      const txt = document.getElementById('chart-text');
-      if (txt) txt.textContent = progress + '%';
+      document.getElementById('h-done').textContent = okSet.size + weakSet.size;
+      document.getElementById('h-ok').textContent = okSet.size;
+      document.getElementById('chart-fill').setAttribute('stroke-dasharray', progress + ' 100');
+      document.getElementById('chart-text').textContent = progress + '%';
     }
 
-    // ─── Quiz ─────────────────────────────────────────────────
-    let qDeck = [], qIdx = 0;
-
-    function applyQuizRange() {
-      const f = parseInt(document.getElementById('q-from').value) || 1;
-      const t = parseInt(document.getElementById('q-to').value)   || 2000;
-      qDeck = ALL.filter(w => w.id >= f && w.id <= t);
-      startQuiz();
-    }
-
-    function startQuiz() { shuffle(qDeck); qIdx = 0; nextQuestion(); }
-
-    function nextQuestion() {
-      if (qIdx >= qDeck.length) { alert('終了'); return; }
-      const correct = qDeck[qIdx];
-      const pool    = ALL.filter(w => w.id !== correct.id);
-      const choices = shuffle([correct, ...shuffle(pool).slice(0, 3)]);
-      document.getElementById('q-word').textContent = correct.w;
-      speak(correct.w);
-      const optContainer = document.getElementById('q-opts');
-      optContainer.innerHTML = '';
-      choices.forEach(c => {
-        const div = document.createElement('div');
-        div.className  = 'opt';
-        div.textContent = cleanText(c.m);
-        div.onclick = () => {
-          if (div.classList.contains('correct') || div.classList.contains('wrong')) return;
-          if (c.id === correct.id) {
-            div.classList.add('correct');
-            okSet.add(correct.id); weakSet.delete(correct.id); saveStatus();
-            setTimeout(() => { qIdx++; nextQuestion(); }, 600);
-          } else {
-            div.classList.add('wrong');
-            weakSet.add(correct.id); okSet.delete(correct.id); saveStatus();
-          }
-        };
-        optContainer.appendChild(div);
-      });
-    }
-
-    // ─── List ─────────────────────────────────────────────────
-    function renderList() {
-      const searchInput = document.getElementById('search').value.trim();
-      const el = document.getElementById('wlist');
-      el.innerHTML = '';
-      const keywords = searchInput.toLowerCase().split(/[\s　]+/).filter(k => k.length > 0);
-      const filtered = ALL.filter(w => {
-        if (keywords.length === 0) return true;
-        const textKeywords = keywords.filter(k => isNaN(k));
-        if (textKeywords.length === 0) return true;
-        return textKeywords.every(q => w.w.toLowerCase().includes(q) || w.m.includes(q));
-      });
-      filtered.forEach(w => {
-        const isW = weakSet.has(w.id), isO = okSet.has(w.id);
-        const row  = document.createElement('div');
-        row.className = 'wrow' + (isW ? ' weak' : isO ? ' ok' : '');
-        row.id = 'word-row-' + w.id;
-        let label = '未着手', bCls = 'wbadge';
-        if (isW) { label = '苦手'; bCls += ' weak'; } else if (isO) { label = '覚えた'; bCls += ' ok'; }
-        row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${cleanText(w.m)}</span><button class='${bCls}' onclick='changeStatus(${w.id}, event)'>${label}</button>`;
-        row.onclick = () => speak(w.w);
-        el.appendChild(row);
-      });
+    function switchTab(t) {
+      if (isListening) stopListen(); window.speechSynthesis.cancel();
+      ['flash', 'quiz', 'list', 'weak', 'listen'].forEach(x => document.getElementById('pane-' + x).classList.toggle('hidden', x !== t));
+      document.querySelectorAll('.tab').forEach((tab, i) => tab.classList.toggle('active', ['flash','quiz','list','weak','listen'][i] === t));
+      if (t === 'weak') renderWeak(); if (t === 'list') renderList();
     }
 
     function jumpToId() {
-      const input    = document.getElementById('search').value.trim();
-      const keywords = input.split(/[\s　]+/);
-      const jumpId   = keywords.find(k => !isNaN(k) && k !== '');
-      if (jumpId) {
-        const target = document.getElementById('word-row-' + jumpId);
-        if (target) {
-          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          target.classList.remove('jump-target');
-          void target.offsetWidth;
-          target.classList.add('jump-target');
-        } else {
-          alert('No.' + jumpId + ' は現在のリストに存在しません');
-        }
-      }
+      const id = document.getElementById('search').value.trim();
+      const target = document.getElementById('word-row-' + id);
+      if (target) { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
     }
 
-    // ─── Weak list ────────────────────────────────────────────
+    function renderList() {
+      const el = document.getElementById('wlist'); el.innerHTML = '';
+      const filter = document.getElementById('search').value.toLowerCase();
+      ALL.filter(w => !filter || w.w.toLowerCase().includes(filter) || w.m.includes(filter)).forEach(w => {
+        const row = document.createElement('div');
+        const isW = weakSet.has(w.id), isO = okSet.has(w.id);
+        row.className = 'wrow' + (isW ? ' weak' : isO ? ' ok' : '');
+        row.id = 'word-row-' + w.id;
+        row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${cleanText(w.m)}</span><button class='wbadge ${isW?"weak":isO?"ok":""}' onclick='changeStatus(${w.id}, event)'>${isW?"苦手":isO?"覚えた":"未着手"}</button>`;
+        row.onclick = () => speak(w.w); el.appendChild(row);
+      });
+    }
+
+    function changeStatus(id, event) {
+      event.stopPropagation();
+      if (okSet.has(id)) { okSet.delete(id); weakSet.add(id); } else if (weakSet.has(id)) { weakSet.delete(id); } else { okSet.add(id); }
+      saveStatus(); renderList(); renderWeak();
+    }
+
     function renderWeak() {
-      const f  = parseInt(document.getElementById('w-from').value) || 1;
-      const t  = parseInt(document.getElementById('w-to').value)   || 2000;
-      const el = document.getElementById('weak-list');
-      el.innerHTML = '';
+      const f = parseInt(document.getElementById('w-from').value) || 1;
+      const t = parseInt(document.getElementById('w-to').value) || 2000;
+      const el = document.getElementById('weak-list'); el.innerHTML = '';
       const list = ALL.filter(w => weakSet.has(w.id) && w.id >= f && w.id <= t);
       document.getElementById('weak-empty').classList.toggle('hidden', list.length > 0);
       list.forEach(w => {
-        const row = document.createElement('div');
-        row.className = 'wrow weak';
+        const row = document.createElement('div'); row.className = 'wrow weak';
         row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${cleanText(w.m)}</span><button class='wbadge weak' onclick='changeStatus(${w.id}, event)'>苦手</button>`;
-        row.onclick = () => speak(w.w);
-        el.appendChild(row);
+        row.onclick = () => speak(w.w); el.appendChild(row);
       });
     }
 
     function applyWeakOnlyFromWeakTab() {
-      const f = parseInt(document.getElementById('w-from').value) || 1;
-      const t = parseInt(document.getElementById('w-to').value)   || 2000;
+      const f = parseInt(document.getElementById('w-from').value), t = parseInt(document.getElementById('w-to').value);
       deck = ALL.filter(w => w.id >= f && w.id <= t && weakSet.has(w.id));
-      if (!deck.length) { alert('範囲内に苦手単語はありません'); return; }
-      document.getElementById('f-from').value = f;
-      document.getElementById('f-to').value   = t;
-      resetSession(); idx = 0; switchTab('flash'); updateCard();
+      if (!deck.length) return alert('苦手単語がありません');
+      idx = 0; switchTab('flash'); updateCard();
     }
 
     function printWeakList() {
-      const f    = parseInt(document.getElementById('w-from').value) || 1;
-      const t    = parseInt(document.getElementById('w-to').value)   || 2000;
+      const f = parseInt(document.getElementById('w-from').value), t = parseInt(document.getElementById('w-to').value);
       const list = ALL.filter(w => weakSet.has(w.id) && w.id >= f && w.id <= t);
-      if (!list.length) { alert('印刷対象の単語がありません'); return; }
-      const printContainer = document.getElementById('print-container');
-      let html = `<div class='print-title'>LEAP 苦手単語チェックシート (No.${f}〜${t})</div><div class='print-columns'>`;
-      list.forEach(w => {
-        html += `<div class='print-item'><div class='print-check'></div><div class='print-no'>${w.id}</div><div class='print-eng'>${w.w}</div><div class='print-line'></div></div>`;
-      });
-      html += `</div>`;
-      printContainer.innerHTML = html;
+      if (!list.length) return alert('対象がありません');
+      let html = `<div class='print-title'>LEAP 苦手リスト (No.${f}-${t})</div><div class='print-columns'>`;
+      list.forEach(w => html += `<div class='print-item'><div class='print-check'></div><div class='print-no'>${w.id}</div><div class='print-eng'>${w.w}</div><div class='print-line'></div></div>`);
+      document.getElementById('print-container').innerHTML = html + '</div>';
       window.print();
-      setTimeout(() => { printContainer.innerHTML = ''; }, 800);
     }
 
-    // ─── Listen ───────────────────────────────────────────────
     function toggleListen() {
       const btn = document.getElementById('btn-listen-play');
-      if (isListening) {
-        isListening = false;
-        window.speechSynthesis.cancel();
-        releaseWakeLock();
-        btn.textContent = '▶ 再開';
-      } else {
-        if (listenIdx === 0 || !listenDeck.length) {
-          const f      = parseInt(document.getElementById('l-from').value) || 1;
-          const t      = parseInt(document.getElementById('l-to').value)   || 2000;
+      if (isListening) { isListening = false; window.speechSynthesis.cancel(); releaseWakeLock(); btn.textContent = '▶ 再開'; }
+      else {
+        if (!listenDeck.length) {
+          const f = parseInt(document.getElementById('l-from').value), t = parseInt(document.getElementById('l-to').value);
           const target = document.getElementById('l-target').value;
           listenDeck = ALL.filter(w => w.id >= f && w.id <= t && (target === 'all' || weakSet.has(w.id)));
-          if (!listenDeck.length) { alert('対象の単語がありません'); return; }
+          if (!listenDeck.length) return alert('対象がありません');
           listenIdx = 0;
         }
-        isListening = true;
-        btn.textContent = '⏸ 一時停止';
-        requestWakeLock();
-        playListenStep();
+        isListening = true; btn.textContent = '⏸ 停止'; requestWakeLock(); playListenStep();
       }
     }
 
-    function stopListen() {
-      isListening = false; listenIdx = 0; listenDeck = [];
-      window.speechSynthesis.cancel();
-      releaseWakeLock();
-      document.getElementById('btn-listen-play').textContent = '▶ 再生';
-      document.getElementById('l-num').textContent = '—';
-      document.getElementById('l-eng').textContent = '—';
-      document.getElementById('l-jpn').textContent = '—';
-    }
+    function stopListen() { isListening = false; listenIdx = 0; listenDeck = []; window.speechSynthesis.cancel(); releaseWakeLock(); document.getElementById('btn-listen-play').textContent = '▶ 再生'; }
 
     function playListenStep() {
-      if (!isListening) return;
-      if (listenIdx >= listenDeck.length) { alert('聞き流しが完了しました'); stopListen(); return; }
-
-      const w           = listenDeck[listenIdx];
-      const speed       = parseFloat(document.getElementById('l-speed').value);
-      // FIX: intervalSec * 1000 に修正（元は / 0.001 で1000倍になっていたため）
-      const intervalMs  = parseFloat(document.getElementById('l-interval').value) * 1000;
-
-      document.getElementById('l-num').textContent = 'No. ' + w.id;
-      document.getElementById('l-eng').textContent = w.w;
-      document.getElementById('l-jpn').textContent = '...';
-
-      const uttrEn  = new SpeechSynthesisUtterance(w.w);
-      uttrEn.lang   = 'en-US';
-      uttrEn.rate   = speed;
-
+      if (!isListening || listenIdx >= listenDeck.length) return isListening && stopListen();
+      const w = listenDeck[listenIdx], speed = parseFloat(document.getElementById('l-speed').value), interval = parseFloat(document.getElementById('l-interval').value) * 1000;
+      document.getElementById('l-num').textContent = 'No. ' + w.id; document.getElementById('l-eng').textContent = w.w; document.getElementById('l-jpn').textContent = '...';
+      const uttrEn = new SpeechSynthesisUtterance(w.w); uttrEn.lang = 'en-US'; uttrEn.rate = speed;
       uttrEn.onend = () => {
         if (!isListening) return;
         setTimeout(() => {
-          if (!isListening) return;
-          const jpText   = extractFirstMeaning(w.m);
-          document.getElementById('l-jpn').textContent = jpText;
-          const uttrJp   = new SpeechSynthesisUtterance(jpText);
-          uttrJp.lang    = 'ja-JP';
-          uttrJp.rate    = speed;
-          uttrJp.onend   = () => {
-            if (!isListening) return;
-            listenIdx++;
-            // 単語間インターバル（速度で補正）
-            setTimeout(() => { if (isListening) playListenStep(); }, Math.max(300, 600 / speed));
-          };
+          const jpText = extractFirstMeaning(w.m); document.getElementById('l-jpn').textContent = jpText;
+          const uttrJp = new SpeechSynthesisUtterance(jpText); uttrJp.lang = 'ja-JP'; uttrJp.rate = speed;
+          uttrJp.onend = () => { if (isListening) { listenIdx++; setTimeout(playListenStep, 600 / speed); } };
           window.speechSynthesis.speak(uttrJp);
-        }, intervalMs);
+        }, interval);
       };
-
-      window.speechSynthesis.cancel();
       window.speechSynthesis.speak(uttrEn);
     }
 
-    // ─── Init ─────────────────────────────────────────────────
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('search').addEventListener('input', renderList);
-    });
+    document.addEventListener('DOMContentLoaded', () => { document.getElementById('search').addEventListener('input', renderList); });
   </script>
 </body>
 </html>
