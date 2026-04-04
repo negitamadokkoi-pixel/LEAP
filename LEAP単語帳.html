@@ -279,7 +279,7 @@
       </div>
 
       <div id='flash-single-view'>
-        <div class='card-scene' id='single-card-scene'>
+        <div class='card-scene' id='single-card-scene' onclick='flipCard()'>
           <div class='card-inner' id='card-inner'>
             <div class='face face-front'>
               <div class='face-num' id='f-num' style='display:flex;align-items:center;justify-content:space-between;width:100%;'>
@@ -514,20 +514,17 @@
   function handleSwipe() {
     const diffX = touchStartX - touchEndX;
     const diffY = Math.abs(touchStartY - touchEndY);
-
     if (Math.abs(diffX) > 80 && Math.abs(diffX) > diffY * 1.5) {
       if (flashMode === 'single') {
-        if (diffX > 0) go(1);      // 左スワイプ → 次へ
-        else go(-1);               // 右スワイプ → 前へ
+        if (diffX > 0) go(1);
+        else go(-1);
       } else {
-        // Gridモードでは左右スワイプで簡易フィードバック（将来的にページ移動も可）
         showToast(diffX > 0 ? '→ 次のページ' : '← 前のページ', 'var(--accent)');
       }
     }
   }
 
   function addSwipeListeners() {
-    // Singleモード
     const singleScene = document.getElementById('single-card-scene');
     if (singleScene) {
       singleScene.addEventListener('touchstart', e => {
@@ -541,7 +538,6 @@
       }, {passive: true});
     }
 
-    // Gridモード
     const gridContainer = document.getElementById('grid-container');
     if (gridContainer) {
       gridContainer.addEventListener('touchstart', e => {
@@ -657,7 +653,7 @@
     saveProgress();
   }
 
-  // ===== GRID MODE (タップで裏返す機能復活) =====
+  // ===== GRID MODE (修正済み) =====
   function renderGrid() {
     const container = document.getElementById('grid-container'); 
     container.innerHTML = '';
@@ -702,7 +698,7 @@
   function flipGridCard(i) {
     const inner = document.getElementById('gc-' + i);
     if (inner) inner.classList.toggle('flip');
-    speak(deck[i].w);
+    if (deck[i]) speak(deck[i].w);
   }
 
   function speakGrid(i, event) {
@@ -1112,4 +1108,4 @@
   });
   </script>
 </body>
-</html>
+                                      </html>
