@@ -69,17 +69,46 @@
     .face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: var(--r); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 28px 24px; text-align: center; border: 1px solid var(--border); gap: 8px; }
     .face-front { background: var(--s1); }
     .face-back { background: var(--s2); border-color: var(--accent); transform: rotateY(180deg); }
-    .face-word { font-family: 'Bebas Neue', sans-serif; font-size: 3.2rem; letter-spacing: 2px; color: var(--text); line-height: 1.1; }
+    
+    /* ★★★ 改善4: 縦持ち時のface-wordの文字サイズを自動調整 ★★★ */
+    .face-word { 
+      font-family: 'Bebas Neue', sans-serif; 
+      font-size: clamp(2.2rem, 8vw, 3.2rem); 
+      letter-spacing: 2px; 
+      color: var(--text); 
+      line-height: 1.1; 
+    }
     .face-eng { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--accent); }
     .face-num { font-size: 0.75rem; color: var(--muted); }
     .face-meaning { font-size: 1rem; color: var(--text); line-height: 1.6; }
     .face-hint { font-size: .75rem; color: var(--muted); margin-top: 4px; }
 
+    /* ★★★ 改善3: 音声ボタンの最小タッチターゲットを48px以上に強化 ★★★ */
+    .speak-btn { 
+      background: transparent; 
+      border: 1px solid var(--border); 
+      color: var(--muted); 
+      border-radius: 8px; 
+      padding: 8px 12px; 
+      cursor: pointer; 
+      font-size: .8rem; 
+      transition: all .15s; 
+      min-width: 48px; 
+      min-height: 48px; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+    }
+    .speak-btn:hover { border-color: var(--accent); color: var(--accent); }
+
     /* ===== GRID MODE ===== */
     .flash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-top: 12px; }
-    .flash-grid .card-scene { min-height: 180px; margin-bottom: 0; }
-    .flash-grid .card-inner { min-height: 180px; }
-    .flash-grid .face-word { font-size: 2rem; }
+    .flash-grid .card-scene { 
+      min-height: 158px; /* ★★★ 改善6: 高さを小さくして1画面に12〜15枚表示可能に ★★★ */
+      margin-bottom: 0; 
+    }
+    .flash-grid .card-inner { min-height: 158px; }
+    .flash-grid .face-word { font-size: clamp(1.6rem, 5vw, 2rem); }
     .flash-grid .face-eng { font-size: 1.4rem; }
     .flash-grid .face-meaning { font-size: .85rem; }
     .grid-card-border-ok { border-color: var(--green) !important; }
@@ -91,7 +120,6 @@
     .grid-voted-ng .face-back   { background: rgba(240,101,112,.15) !important; border-color: var(--red) !important; }
     /* 音声ボタン */
     .speak-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 4px 8px; cursor: pointer; font-size: .8rem; transition: all .15s; }
-    .speak-btn:hover { border-color: var(--accent); color: var(--accent); }
     /* 修正ボタン */
     .undo-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 4px 10px; cursor: pointer; font-size: .72rem; transition: all .15s; margin-top: 6px; }
     .undo-btn:hover { border-color: var(--yellow); color: var(--yellow); }
@@ -211,8 +239,7 @@
     }
 
     @media (max-width: 500px) {
-      .face-word { font-size: 2.4rem; }
-      .qword { font-size: 2.2rem; }
+      .face-word { font-size: clamp(2.0rem, 9vw, 2.8rem); }
     }
   </style>
 </head>
@@ -282,9 +309,17 @@
       <div id='flash-single-view'>
         <div class='card-scene' onclick='flipCard()'>
           <div class='card-inner' id='card-inner'>
+            <!-- ★★★ 改善1: フロント面にも音声ボタンを常時表示 ★★★ -->
             <div class='face face-front'>
-              <div class='face-num' id='f-num'>—</div>
+              <div class='face-num' id='f-num' style='display:flex;align-items:center;justify-content:space-between;width:100%;'>
+                No. —
+                <button class='speak-btn' onclick='speakSingleFront(event)'>🔊</button>
+              </div>
               <div class='face-word' id='f-word'>—</div>
+              <!-- ★★★ 改善2: 範囲内の正答率をリアルタイムでカード上に表示 ★★★ -->
+              <div id='f-accuracy-on-card' style='font-size:0.72rem;color:var(--muted);margin-top:6px;width:100%;text-align:right;'>
+                範囲内正答率: <span id='card-acc-rate' style='color:var(--accent);font-weight:700;'>0%</span>
+              </div>
               <div class='face-hint'>タップして答えを見る</div>
             </div>
             <div class='face face-back'>
@@ -313,12 +348,9 @@
         </div>
       </div>
 
+      <!-- ★★★ 改善5: 無限スクロール化（ページングボタン完全削除） ★★★ -->
       <div id='flash-grid-view' class='hidden'>
         <div id='grid-container' class='flash-grid'></div>
-        <div class='btnrow' style='margin-top:16px;'>
-          <button class='btn' onclick='moveGridPage(-1)'>← 前の10件</button>
-          <button class='btn' onclick='moveGridPage(1)'>次の10件 →</button>
-        </div>
       </div>
     </div>
 
@@ -434,8 +466,6 @@
   let weakSet = new Set(), okSet = new Set();
   let sessionOk = 0, sessionNg = 0;
   let flashMode = 'single';
-  const GRID_SIZE = 10;
-  let gridPageIdx = 0; // FIX: グリッド専用ページインデックスを分離
   let isListening = false, listenDeck = [], listenIdx = 0, listenPaused = false, wakeLock = null;
   let qDeck = [], qIdx = 0, qOk = 0, qTotal = 0;
   let tyDeck = [], tyIdx = 0, tyOk = 0, tyNg = 0, tyAnswered = false;
@@ -452,7 +482,6 @@
     updateHdr();
   }
 
-  // FIX: 進捗保存 — シャッフル順・インデックス・範囲すべて保存
   function saveProgress() {
     if (!currentFileName) return;
     localStorage.setItem(sk('idx'), idx);
@@ -462,13 +491,6 @@
     localStorage.setItem(sk('to'),   document.getElementById('f-to').value);
     localStorage.setItem(sk('shuf'), shuffled ? '1' : '0');
     localStorage.setItem(sk('mode'), flashMode);
-    localStorage.setItem(sk('grid_idx'), gridPageIdx);
-    // シャッフル順序を保存（順序維持が重要）
-    if (shuffled) {
-      localStorage.setItem(sk('shuf_ids'), JSON.stringify(deck.map(w => w.id)));
-    } else {
-      localStorage.removeItem(sk('shuf_ids'));
-    }
   }
 
   // ===== HISTORY =====
@@ -526,9 +548,7 @@
     reader.onload = (e) => {
       try {
         let parsed = JSON.parse(e.target.result);
-        // 配列でもオブジェクトでも対応
         ALL = Array.isArray(parsed) ? parsed : Object.values(parsed);
-        // id が無ければ連番付与
         ALL = ALL.map((w,i) => ({ id: w.id ?? (i+1), w: w.w || w.word || '', m: w.m || w.meaning || '' }));
       } catch(err) { alert('JSONの読み込みに失敗しました: ' + err.message); return; }
       document.getElementById('data-loader').style.display = 'none';
@@ -555,7 +575,6 @@
     document.getElementById('f-to').value   = t;
     shuffled = localStorage.getItem(sk('shuf')) === '1';
     const savedMode = localStorage.getItem(sk('mode')) || 'single';
-    gridPageIdx = parseInt(localStorage.getItem(sk('grid_idx'))) || 0;
 
     const sbtn = document.getElementById('shuf-btn');
     sbtn.style.background = shuffled ? 'var(--accent)' : 'var(--s2)';
@@ -564,7 +583,6 @@
     if (shuffled) {
       const savedIds = JSON.parse(localStorage.getItem(sk('shuf_ids')) || '[]');
       deck = savedIds.map(id => ALL.find(w => w.id === id)).filter(Boolean);
-      // 保存されたIDと現在のALLが合わない場合は再生成
       if (!deck.length) { deck = shuffle(ALL.filter(w => w.id >= f && w.id <= t)); }
     } else {
       deck = ALL.filter(w => w.id >= f && w.id <= t);
@@ -582,7 +600,7 @@
     const t = parseInt(document.getElementById('f-to').value)   || 2000;
     deck = ALL.filter(w => w.id >= f && w.id <= t);
     if (shuffled) shuffle(deck);
-    idx = startIdx; gridPageIdx = 0;
+    idx = startIdx;
     if (startIdx === 0) { sessionOk = 0; sessionNg = 0; }
     updateAccuracy(); updateCard();
   }
@@ -598,12 +616,19 @@
     updateCard();
   }
 
+  // ★★★ 新規追加: Singleフロント音声ボタン用 ★★★
+  function speakSingleFront(e) {
+    e.stopPropagation();
+    if (deck.length) speak(deck[idx].w);
+  }
+
   // ===== UPDATE CARD =====
   function updateCard() {
     if (!deck.length) return;
     if (flashMode === 'single') {
       const w = deck[idx];
-      document.getElementById('f-num').textContent  = 'No. ' + w.id;
+      // ★★★ 改善1: 音声ボタン付き番号表示 ★★★
+      document.getElementById('f-num').innerHTML = `No. ${w.id} <button class='speak-btn' onclick='speakSingleFront(event)'>🔊</button>`;
       document.getElementById('f-word').textContent = w.w;
       document.getElementById('b-num').textContent  = 'No. ' + w.id;
       document.getElementById('b-eng').textContent  = w.w;
@@ -611,6 +636,9 @@
       document.getElementById('f-prog').textContent = (idx+1) + ' / ' + deck.length;
       document.getElementById('f-fill').style.width = ((idx+1)/deck.length*100) + '%';
       document.getElementById('f-pct').textContent  = Math.round((idx+1)/deck.length*100) + '%';
+      // ★★★ 改善2: カード上に範囲内正答率を表示 ★★★
+      const acc = document.getElementById('f-accuracy').textContent;
+      document.getElementById('card-acc-rate').textContent = acc + '%';
       speak(w.w);
     } else {
       renderGrid();
@@ -618,25 +646,24 @@
     saveProgress();
   }
 
-  // ===== GRID =====
+  // ★★★ 改善5: 無限スクロール（全件表示） ★★★
   function renderGrid() {
-    const container = document.getElementById('grid-container'); container.innerHTML = '';
-    const start = Math.floor(gridPageIdx / GRID_SIZE) * GRID_SIZE;
-    const end   = Math.min(start + GRID_SIZE, deck.length);
-    for (let i = start; i < end; i++) {
-      const w = deck[i]; const card = document.createElement('div'); card.className = 'card-scene';
+    const container = document.getElementById('grid-container'); 
+    container.innerHTML = '';
+    deck.forEach((w, i) => {
       const isW = weakSet.has(w.id), isO = okSet.has(w.id);
       const voted = isW || isO;
       const votedClass = isO ? 'grid-voted-ok' : isW ? 'grid-voted-ng' : '';
-      // 判定済みのとき：ボタンをdisabledにし、修正ボタンを表示
       const voteButtons = voted
         ? `<button class='wbadge ok' disabled style='opacity:0.3;cursor:default;' onclick='event.stopPropagation()'>✓ 覚えた</button>
            <button class='wbadge weak' disabled style='opacity:0.3;cursor:default;' onclick='event.stopPropagation()'>✗ 苦手</button>
            <button class='undo-btn' onclick='undoGrid(${i},event)'>↩ 修正</button>`
         : `<button class='wbadge ok' onclick='voteGrid(${i},true,event)'>✓ 覚えた</button>
            <button class='wbadge weak' onclick='voteGrid(${i},false,event)'>✗ 苦手</button>`;
+      const card = document.createElement('div');
+      card.className = 'card-scene';
       card.innerHTML = `
-        <div class='card-inner ${votedClass}' id='gc-${i}'>
+        <div class='card-inner \( {votedClass}' id='gc- \){i}'>
           <div class='face face-front' onclick='flipGridCard(${i})'>
             <div class='face-num' style='display:flex;align-items:center;gap:8px;'>
               No. ${w.id}
@@ -654,35 +681,24 @@
           </div>
         </div>`;
       container.appendChild(card);
-    }
-    document.getElementById('f-prog').textContent = (start+1) + '-' + end + ' / ' + deck.length;
-    document.getElementById('f-fill').style.width = (end/deck.length*100) + '%';
-    document.getElementById('f-pct').textContent  = Math.round(end/deck.length*100) + '%';
+    });
+    document.getElementById('f-prog').textContent = `1-${deck.length} / ${deck.length}`;
+    document.getElementById('f-fill').style.width = '100%';
+    document.getElementById('f-pct').textContent  = '100%';
   }
 
   function flipGridCard(i) { document.getElementById('gc-'+i).classList.toggle('flip'); speak(deck[i].w); }
   function speakGrid(i, event) { event.stopPropagation(); speak(deck[i].w); }
 
-  // 修正ボタン：判定をリセットして表に戻す
   function undoGrid(i, event) {
     event.stopPropagation();
     const w = deck[i];
     okSet.delete(w.id); weakSet.delete(w.id);
     saveStatus(); updateAccuracy();
-    // カードを表に戻してから再描画
     const cardInner = document.getElementById('gc-'+i);
     if (cardInner) cardInner.classList.remove('flip');
     setTimeout(() => renderGrid(), 50);
     saveProgress();
-  }
-
-  // FIX: グリッドページングはgridPageIdxを使う
-  function moveGridPage(dir) {
-    const nextIdx = gridPageIdx + dir * GRID_SIZE;
-    if (nextIdx >= 0 && nextIdx < deck.length) {
-      gridPageIdx = nextIdx; renderGrid(); window.scrollTo({top:0,behavior:'smooth'});
-      saveProgress();
-    }
   }
 
   // ===== VOTE =====
@@ -692,7 +708,7 @@
     if (ok) { okSet.add(w.id); weakSet.delete(w.id); sessionOk++; recordStudy(1); }
     else    { weakSet.add(w.id); okSet.delete(w.id); sessionNg++; }
     saveStatus(); updateAccuracy();
-    speak(w.w); // 音声再生
+    speak(w.w);
     const inner = document.getElementById('card-inner');
     if (!inner.classList.contains('flip')) inner.classList.add('flip');
     setTimeout(() => {
@@ -704,23 +720,17 @@
   function voteGrid(i, ok, event) {
     event.stopPropagation();
     const w = deck[i];
-    // 既に判定済みなら何もしない（二重押し防止）
     if (okSet.has(w.id) || weakSet.has(w.id)) return;
     if (ok) { okSet.add(w.id); weakSet.delete(w.id); sessionOk++; recordStudy(1); }
     else    { weakSet.add(w.id); okSet.delete(w.id); sessionNg++; }
     saveStatus(); updateAccuracy();
-    speak(w.w); // 音声再生
+    speak(w.w);
 
     const cardInner = document.getElementById('gc-' + i);
     if (cardInner) {
-      // 1) カード全体を色で塗りつぶす
       cardInner.classList.remove('grid-voted-ok', 'grid-voted-ng');
       cardInner.classList.add(ok ? 'grid-voted-ok' : 'grid-voted-ng');
-      // 2) 自動で裏返す（まだ表なら）
-      if (!cardInner.classList.contains('flip')) {
-        cardInner.classList.add('flip');
-      }
-      // 3) ボタンを無効化 → 修正ボタンに差し替え
+      if (!cardInner.classList.contains('flip')) cardInner.classList.add('flip');
       const btnWrap = cardInner.querySelector('.face-front > div:last-child');
       if (btnWrap) {
         btnWrap.innerHTML = `
@@ -810,7 +820,6 @@
           setTimeout(() => { delete optC.dataset.answered; qIdx++; nextQuestion(); }, 700);
         } else {
           div.classList.add('wrong'); weakSet.add(correct.id); okSet.delete(correct.id); saveStatus();
-          // 正解を表示
           optC.querySelectorAll('.opt').forEach(o => { if(o.textContent === cleanText(correct.m)) o.classList.add('correct'); });
           setTimeout(() => { delete optC.dataset.answered; qIdx++; nextQuestion(); }, 1400);
         }
@@ -848,7 +857,6 @@
   function updateTypingHint(w) {
     const showHint = document.getElementById('t-hint-chk').checked;
     if (showHint && w) {
-      // 最初の1文字だけ表示、残りは_
       document.getElementById('ty-hint').textContent = w.w[0] + '_ '.repeat(w.w.length - 1).trim();
     } else {
       document.getElementById('ty-hint').textContent = '';
@@ -898,7 +906,6 @@
     if (t==='weak')    renderWeak();
     if (t==='list')    renderList();
     if (t==='history') renderHistory();
-    // FIX: クイズタブに切り替え時に自動初期化
     if (t==='quiz' && qDeck.length===0 && ALL.length) applyQuizRange();
     if (t==='typing' && tyDeck.length===0 && ALL.length) applyTypingRange();
   }
@@ -927,7 +934,7 @@
       const isW = weakSet.has(w.id), isO = okSet.has(w.id);
       row.className = 'wrow' + (isW?' weak':isO?' ok':'');
       row.id = 'word-row-'+w.id;
-      row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${cleanText(w.m)}</span><button class='wbadge ${isW?"weak":isO?"ok":""}' onclick='changeStatus(${w.id},event)'>${isW?"苦手":isO?"覚えた":"未着手"}</button>`;
+      row.innerHTML = `<span class='wnum'>\( {w.id}</span><span class='weng'> \){w.w}</span><span class='wjpn'>${cleanText(w.m)}</span><button class='wbadge \( {isW?"weak":isO?"ok":""}' onclick='changeStatus( \){w.id},event)'>${isW?"苦手":isO?"覚えた":"未着手"}</button>`;
       row.onclick = () => speak(w.w);
       el.appendChild(row);
     });
@@ -950,7 +957,7 @@
     document.getElementById('weak-empty').classList.toggle('hidden', list.length>0);
     list.forEach(w => {
       const row = document.createElement('div'); row.className = 'wrow weak';
-      row.innerHTML = `<span class='wnum'>${w.id}</span><span class='weng'>${w.w}</span><span class='wjpn'>${cleanText(w.m)}</span><button class='wbadge weak' onclick='changeStatus(${w.id},event)'>苦手</button>`;
+      row.innerHTML = `<span class='wnum'>\( {w.id}</span><span class='weng'> \){w.w}</span><span class='wjpn'>\( {cleanText(w.m)}</span><button class='wbadge weak' onclick='changeStatus( \){w.id},event)'>苦手</button>`;
       row.onclick = () => speak(w.w); el.appendChild(row);
     });
   }
@@ -960,7 +967,7 @@
     const t = parseInt(document.getElementById('w-to').value);
     deck = ALL.filter(w => w.id>=f && w.id<=t && weakSet.has(w.id));
     if (!deck.length) { alert('苦手単語がありません'); return; }
-    idx = 0; gridPageIdx = 0; switchTab('flash'); updateCard();
+    idx = 0; switchTab('flash'); updateCard();
   }
 
   function printWeakList() {
@@ -968,23 +975,20 @@
     const t = parseInt(document.getElementById('w-to').value);
     const list = ALL.filter(w => weakSet.has(w.id) && w.id>=f && w.id<=t);
     if (!list.length) { alert('対象がありません'); return; }
-    let html = `<div class='print-title'>LEAP 苦手リスト (No.${f}-${t})</div><div class='print-columns'>`;
-    list.forEach(w => html += `<div class='print-item'><div class='print-check'></div><div class='print-no'>${w.id}</div><div class='print-eng'>${w.w}</div><div class='print-line'></div></div>`);
+    let html = `<div class='print-title'>LEAP 苦手リスト (No.\( {f}- \){t})</div><div class='print-columns'>`;
+    list.forEach(w => html += `<div class='print-item'><div class='print-check'></div><div class='print-no'>\( {w.id}</div><div class='print-eng'> \){w.w}</div><div class='print-line'></div></div>`);
     document.getElementById('print-container').innerHTML = html + '</div>';
     window.print(); setTimeout(() => { document.getElementById('print-container').innerHTML = ''; }, 800);
   }
 
   // ===== LISTEN =====
-  // FIX: 一時停止と再開を正しく分離
   function toggleListen() {
     const btn = document.getElementById('btn-listen-play');
     if (isListening) {
-      // 一時停止
       isListening = false; window.speechSynthesis.cancel();
       releaseWakeLock(); btn.textContent = '▶ 再開';
     } else {
       if (!listenDeck.length) {
-        // 初回再生
         const f = parseInt(document.getElementById('l-from').value);
         const t = parseInt(document.getElementById('l-to').value);
         const target = document.getElementById('l-target').value;
@@ -992,7 +996,6 @@
         if (!listenDeck.length) { alert('対象がありません'); return; }
         listenIdx = 0;
       }
-      // 再開 or 初回
       isListening = true; btn.textContent = '⏸ 停止';
       requestWakeLock(); playListenStep();
     }
@@ -1042,7 +1045,6 @@
     document.getElementById('history-no-data').classList.add('hidden');
     document.getElementById('history-content').classList.remove('hidden');
 
-    // ストリーク
     const streak = calcStreak(hist);
     const streakEl = document.getElementById('streak-display');
     if (streak >= 2) {
@@ -1050,7 +1052,6 @@
       document.getElementById('streak-count').textContent = streak;
     } else { streakEl.classList.add('hidden'); }
 
-    // 過去14日バーチャート
     const chart = document.getElementById('bar-chart'); chart.innerHTML = '';
     const days = []; const today = new Date();
     for (let i=13; i>=0; i--) { const d = new Date(today); d.setDate(d.getDate()-i); days.push(d.toISOString().slice(0,10)); }
@@ -1058,12 +1059,11 @@
     days.forEach(d => {
       const val = hist[d] || 0;
       const col = document.createElement('div'); col.className = 'bar-col';
-      const label = d.slice(5); // MM-DD
-      col.innerHTML = `<div class='bar-val'>${val||''}</div><div class='bar-fill' style='height:${Math.round(val/maxVal*100)}%;background:${val>0?"var(--accent)":"var(--border)"};'></div><div class='bar-label'>${label}</div>`;
+      const label = d.slice(5);
+      col.innerHTML = `<div class='bar-val'>\( {val||''}</div><div class='bar-fill' style='height: \){Math.round(val/maxVal*100)}%;background:\( {val>0?"var(--accent)":"var(--border)"};'></div><div class='bar-label'> \){label}</div>`;
       chart.appendChild(col);
     });
 
-    // 統計
     const totalOk   = keys.reduce((s,k)=>s+hist[k], 0);
     const totalDays  = keys.length;
     const avgPerDay  = totalDays ? Math.round(totalOk/totalDays) : 0;
@@ -1072,7 +1072,7 @@
       <div class='hst-item'><strong>${totalOk}</strong><span>累計正解数</span></div>
       <div class='hst-item'><strong>${totalDays}</strong><span>学習日数</span></div>
       <div class='hst-item'><strong>${avgPerDay}</strong><span>1日平均</span></div>
-      <div class='hst-item'><strong>${hist[bestDay]}</strong><span>最高記録（${bestDay.slice(5)}）</span></div>
+      <div class='hst-item'><strong>\( {hist[bestDay]}</strong><span>最高記録（ \){bestDay.slice(5)}）</span></div>
     `;
   }
 
